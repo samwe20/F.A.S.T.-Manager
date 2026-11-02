@@ -77,10 +77,11 @@ createNode neslučuje výchozí vlastnosti, když dostane částečný fieldValu
 
 Editor bloků umí odstavec, nadpis, odrážku, zaškrtnutí a citát. Kód, matematika, tabulka, sloupce a přepínač tam nejsou a nepřidávej je, dokud o ně není požádáno.
 
-Lomítko funguje jen když / je první znak bloku. Enter pak vezme celý řádek.
+Lomítko může být na začátku bloku i uprostřed věty. Enter vezme celý řádek.
 
 /úkol koupit mléko založí úkol s názvem „koupit mléko“ a text bloku se změní na [[id]].
 /úkol bez zbytku založí úkol bez názvu.
+/úkol pro /Frantu je v tom, že v projektu /Malostop je mnoho nejasností založí úkol, osobu a projekt. Název a text úkolu je ta věta bez úvodního typu, se jmény tak, jak jsou napsaná. Na denní poznámce se z řádku stane karta [[id]] úkolu. Osoba se zapíše do vlastnosti assignee, projekt do project. Jméno se hledá i ve skloňování, takže /Frantu najde už existující objekt Franta. Nové jméno bez vodítka je osoba a uloží se tak, jak je napsané. Slovo mezi lomítky, které je název typu, určí typ: „v projektu /Malostop“ založí projekt.
 Shoda jde přes český název z i18n, anglický název a id typu. Diakritika se skládá.
 Když předpona sedí na víc typů, Enter nezaloží nic.
 Shoda na typ vyhraje nad shodou na druh bloku. Zaškrtávací blok se jmenuje „Zaškrtnutí“ / „Checkbox“, takže /úkol znamená typ úkol.

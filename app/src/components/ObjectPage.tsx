@@ -48,7 +48,8 @@ export function ObjectPage() {
   const getNodeBacklinks = useAppStore((s) => s.getNodeBacklinks);
   const ensureTag = useAppStore((s) => s.ensureTag);
   const createWeblink = useAppStore((s) => s.createWeblink);
-  const createObjectFromLine = useAppStore((s) => s.createObjectFromLine);
+  const commitSlashLine = useAppStore((s) => s.commitSlashLine);
+  const ensureSlashMention = useAppStore((s) => s.ensureSlashMention);
   const attachMedia = useAppStore((s) => s.attachMedia);
   const setMediaProperty = useAppStore((s) => s.setMediaProperty);
   const paper = useInkPaper();
@@ -315,7 +316,8 @@ export function ObjectPage() {
         objectTypes={objectTypes}
         onEnsureTag={ensureTag}
         onCreateWeblink={createWeblink}
-        onCreateObject={(typeId, lineTitle) => createObjectFromLine(typeId, lineTitle, dayKey || undefined)}
+        onCommitSlashLine={(text, forcedTypeId) => commitSlashLine(text, dayKey || undefined, forcedTypeId)}
+        onEnsureSlashMention={ensureSlashMention}
         onChange={(blocks) => void saveObjectBody(node.id, title, blocks)}
       />
 

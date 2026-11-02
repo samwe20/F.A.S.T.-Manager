@@ -70,9 +70,22 @@ import type {
   Theme,
   WorkspaceRecord,
 } from '../types';
-import { emptyBlock } from '../utils/blocks';
+import { emptyBlock, objectTitle } from '../utils/blocks';
 import { blobRef } from '../utils/media';
 import { localToday } from '../utils/dateUtils';
+import {
+  linkMentionFields,
+  matchObjects,
+  planMention,
+  planSlashLine,
+  renderSlashText,
+  replacementFor,
+  slashTokens,
+  type PlannedMention,
+  type ResolvedMention,
+  type SlashObjectRef,
+  type SlashTypeRef,
+} from '../utils/slashLine';
 import { getFolderNodes, resolveFolderTitle } from '../utils/folderUtils';
 import { getBacklinks, resolveNodeTitle, searchNodes } from '../utils/nodeUtils';
 
@@ -180,6 +193,12 @@ interface AppState {
   saveNewQuery: (input: { name: string; expression: QueryExpression }) => Promise<void>;
   openDaily: (date: string) => Promise<void>;
   createObjectFromLine: (typeId: string, title: string, dueDate?: string) => Promise<string | undefined>;
+  commitSlashLine: (
+    text: string,
+    dueDate?: string,
+    forcedTypeId?: string,
+  ) => Promise<{ kind: 'none' } | { kind: 'object'; id: string } | { kind: 'text'; text: string }>;
+  ensureSlashMention: (name: string, typeId: string) => Promise<string | undefined>;
   createTag: (name: string) => Promise<void>;
   ensureTag: (name: string) => Promise<string | undefined>;
   createWeblink: (url: string) => Promise<string | undefined>;
@@ -191,6 +210,31 @@ interface AppState {
   loadVault: () => Promise<void>;
   disconnectVault: () => Promise<void>;
 }
+
+function slashTypes(objectTypes: ObjectTypeRecord[]): SlashTypeRef[] {
+  return objectTypes
+    .filter((type) => !type.deleted)
+    .map((type) => ({
+      id: type.id,
+      names: [
+        type.name,
+        String(i18n.t(`supertags.${type.id}`, { lng: 'cs', defaultValue: type.name })),
+        String(i18n.t(`supertags.${type.id}`, { lng: 'en', defaultValue: type.name })),
+      ],
+    }));
+}
+
+function slashObjects(nodes: NodeRecord[]): SlashObjectRef[] {
+  return nodes
+    .filter((node) => !node.deleted)
+    .map((node) => ({
+      id: node.id,
+      typeId: node.typeId ?? '',
+      names: [objectTitle(node), ...(node.aliases ?? [])].map((name) => name.trim()).filter(Boolean),
+    }));
+}
+
+const HIDDEN_SLASH_TYPES = new Set(['tag', 'folder', 'dailyNote']);
 
 function resolveTheme(theme: Theme): 'light' | 'dark' {
   if (theme === 'system') {
@@ -871,6 +915,107 @@ export const useAppStore = create<AppState>((set, get) => ({
         typeId,
         supertagIds: [typeId],
         fieldValues: { [typeId]: fields },
+        blocks: [{ ...emptyBlock(), text: trimmed }],
+      }),
+    );
+    await get().refresh();
+    return node.id;
+  },
+
+  commitSlashLine: async (text, dueDate, forcedTypeId) => {
+    const { settings, objectTypes, nodes } = get();
+    if (!settings) return { kind: 'none' };
+    const types = slashTypes(objectTypes);
+    const known = slashObjects(nodes);
+    let plan = planSlashLine(text, types, known);
+    if (forcedTypeId && !HIDDEN_SLASH_TYPES.has(forcedTypeId)) {
+      const leading = slashTokens(text)[0];
+      if (leading?.start === 0) {
+        plan = {
+          kind: 'create',
+          typeId: forcedTypeId,
+          leading,
+          mentions: slashTokens(text).slice(1).map((token) => planMention(text, token, types, known)),
+        };
+      }
+    }
+    if (plan.kind === 'none' || plan.kind === 'ambiguous') return { kind: 'none' };
+    if (plan.kind === 'mentions' && plan.mentions.every((mention) => mention.action === 'keep')) return { kind: 'none' };
+
+    const created = await get().withHistory(async () => {
+      const pool = slashObjects(get().nodes);
+      const realize = async (mention: PlannedMention): Promise<ResolvedMention> => {
+        const decided = planMention(text, mention.token, types, pool);
+        if (decided.action === 'link' && decided.id) return replacementFor(decided);
+        if (decided.action !== 'create' || !decided.typeId || HIDDEN_SLASH_TYPES.has(decided.typeId)) {
+          return replacementFor({ ...mention, action: 'keep' });
+        }
+        const type = objectTypes.find((item) => item.id === decided.typeId && !item.deleted);
+        if (!type) return replacementFor({ ...mention, action: 'keep' });
+        const title = (decided.title ?? decided.token.raw).trim();
+        const node = await createNode({
+          workspaceId: settings.workspaceId,
+          parentId: null,
+          content: title,
+          title,
+          typeId: type.id,
+          supertagIds: [type.id],
+          fieldValues: { [type.id]: fieldsForLineObject(type, dueDate) },
+          blocks: [{ ...emptyBlock(), text: title }],
+        });
+        pool.push({ id: node.id, typeId: type.id, names: [title] });
+        return replacementFor(decided, node.id);
+      };
+
+      const resolved: ResolvedMention[] = [];
+      for (const mention of plan.mentions) resolved.push(await realize(mention));
+      if (plan.kind === 'mentions') return { kind: 'text' as const, text: renderSlashText(text, resolved).linked };
+
+      const type = objectTypes.find((item) => item.id === plan.typeId && !item.deleted);
+      if (!type) return { kind: 'none' as const };
+      const rendered = renderSlashText(text, resolved, plan.leading);
+      const links = resolved.filter((mention) => mention.id && mention.typeId).map((mention) => ({
+        id: mention.id as string,
+        typeId: mention.typeId as string,
+      }));
+      const node = await createNode({
+        workspaceId: settings.workspaceId,
+        parentId: null,
+        content: rendered.plain,
+        title: rendered.plain,
+        typeId: type.id,
+        supertagIds: [type.id],
+        fieldValues: { [type.id]: linkMentionFields(type, fieldsForLineObject(type, dueDate), links) },
+        blocks: [{ ...emptyBlock(), text: rendered.plain }],
+      });
+      return { kind: 'object' as const, id: node.id };
+    });
+
+    await get().refresh();
+    if (created.kind === 'text' && created.text === text) return { kind: 'none' };
+    return created;
+  },
+
+  ensureSlashMention: async (name, typeId) => {
+    const { settings, objectTypes, nodes } = get();
+    const trimmed = name.trim();
+    if (!settings || !trimmed || HIDDEN_SLASH_TYPES.has(typeId)) return undefined;
+    const found = matchObjects(trimmed, slashObjects(nodes)).objects;
+    const hinted = found.filter((item) => item.typeId === typeId);
+    if (hinted.length === 1) return hinted[0].id;
+    if (found.length === 1) return found[0].id;
+    if (found.length > 1) return undefined;
+    const type = objectTypes.find((item) => item.id === typeId && !item.deleted);
+    if (!type) return undefined;
+    const node = await get().withHistory(() =>
+      createNode({
+        workspaceId: settings.workspaceId,
+        parentId: null,
+        content: trimmed,
+        title: trimmed,
+        typeId: type.id,
+        supertagIds: [type.id],
+        fieldValues: { [type.id]: fieldsForLineObject(type) },
         blocks: [{ ...emptyBlock(), text: trimmed }],
       }),
     );
