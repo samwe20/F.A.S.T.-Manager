@@ -1,6 +1,6 @@
 [package]
 name = "fast-manager"
-version = "1.0.1"
+version = "1.0.2"
 description = "F.A.S.T Manager — Finally Awesome and Simple Task Manager"
 authors = ["FAST Team"]
 edition = "2021"
