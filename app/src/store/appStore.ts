@@ -289,7 +289,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       } catch (err) {
         vaultError = err instanceof Error ? err.message : String(err);
       }
-      const settings = await loadSettings();
+      let settings = await loadSettings();
+      if (!settings.themeSet) {
+        settings = { ...settings, theme: settings.theme === 'dark' ? 'dark' : 'light', themeSet: true };
+        await saveSettings(settings);
+      }
       const [workspaces, queries, objectTypes, collections, templates] = await Promise.all([
         getWorkspaces(),
         getQueries(),
@@ -569,7 +573,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateSettings: async (patch) => {
     const current = get().settings;
     if (!current) return;
-    const next = { ...current, ...patch };
+    const next = { ...current, ...patch, ...(patch.theme ? { themeSet: true } : {}) };
     await saveSettings(next);
     if (patch.theme) get().applyTheme(patch.theme);
     if (patch.language) {

@@ -104,7 +104,7 @@ Denní poznámka: když se název rovná datu, nadpis je dlouhé datum a nad ní
 
 Pod úkoly jsou náhledy, nejvýš 12. Berou se objekty s názvem, obrázkem, odkazem nebo úryvkem. Denní poznámka, štítek, složka, smazané, aktuální poznámka a úkoly už vypsané nahoře se vynechají. Stejný den je první, pak updatedAt. Úryvek má nejvýš 4 řádky, holé [[id]] a řádek shodný s názvem se zahodí. Obrázek zabere dva sloupce.
 
-Kalendář je po otevření týden. Klik na den volá openDaily. Denní poznámky se v seznamu dat neopakují. ISO názvy se formátují jako dlouhé datum. Dnešek je modrý čtverec s bílým textem.
+Kalendář je po otevření týden. Klik na den volá openDaily. Denní poznámky se v seznamu dat neopakují. ISO názvy se formátují jako dlouhé datum. Dnešek je černý čtverec s bílým textem.
 
 Ctrl+Shift+Space, Ctrl+N a příkazy palety pro dnešek, inbox a plánované otevřou dnešní poznámku. Paleta nemá novou složku, nový dokument ani uložené úkolové dotazy. Rychlý zápis je namontovaný, ale nemá viditelný vstup.
 
@@ -116,7 +116,7 @@ Pohledy typu, kolekce a dotazu: seznam, tabulka, karty, kanban. Kanban potřebuj
 
 ## Vzhled
 
-Světlý režim je šedobílý jako Capacities. Podklad #f6f6f7, lišta #f3f3f4, list #ffffff, text #1c1c1e, tlumená #5f646c, linka #e4e4e7. Akcent pro fokus a dnešek je modrá #3b6fd8. Barva typu je jen na názvu typu, ikoně a malém štítku. Jasné barvy typu se pro text ztmaví nebo zesvětlí, dokud nemají kontrast aspoň 4,5:1 (labelInk). Malá tečka úkolu si nechává původní hex.
+Světlý režim je bílý jako Capacities a Tana. Podklad stránky #fafafa, list #ffffff bez rámečku, lišta #f4f4f4, text #171717, tlumená #5f646c, linka #e7e7e7. Akcent pro fokus, odkazy a dnešek je černá #171717, ne modrá. V postranním panelu je barva typu jen na ikoně, název typu je černý. Na stránce objektu zůstává barva na názvu typu a malém štítku. Jasné barvy typu se pro text ztmaví nebo zesvětlí, dokud nemají kontrast aspoň 4,5:1 (labelInk). Malá tečka úkolu si nechává původní hex. Výchozí vzhled je světlý. Kdo měl nastavené „podle systému“ a ještě si vzhled sám nezvolil, po startu dostane světlý. Tmavý režim zůstává v nastavení.
 
 Tmavý režim je neutrální šedá, ne fialový Obsidian. List #242426, podklad #1b1b1d.
 

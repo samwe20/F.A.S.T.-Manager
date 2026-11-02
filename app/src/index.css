@@ -15,21 +15,21 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --desk: #f6f6f7;
+  --desk: #fafafa;
   --bg: var(--desk);
   --surface: #ffffff;
-  --surface-2: #ececee;
-  --border: #e4e4e7;
-  --text: #1c1c1e;
+  --surface-2: #f2f2f2;
+  --border: #e7e7e7;
+  --text: #171717;
   --muted: #5f646c;
-  --accent: #3b6fd8;
+  --accent: #171717;
   --on-accent: #ffffff;
-  --accent-soft: rgba(59, 111, 216, 0.12);
+  --accent-soft: #f0f0f0;
   --paper: #ffffff;
-  --rail: #f3f3f4;
-  --rail-text: #1c1c1e;
+  --rail: #f4f4f4;
+  --rail-text: #171717;
   --rail-muted: #5f646c;
-  --mark: #1c1c1e;
+  --mark: #171717;
   --shadow: none;
   --lemon: #111111;
   --tape: #111111;
@@ -53,9 +53,9 @@
   --border: #3c3c40;
   --text: #f2f2f3;
   --muted: #b3b3b8;
-  --accent: #7aa2f7;
-  --on-accent: #ffffff;
-  --accent-soft: rgba(122, 162, 247, 0.18);
+  --accent: #f2f2f3;
+  --on-accent: #171717;
+  --accent-soft: #2e2e30;
   --paper: #242426;
   --rail: #1b1b1d;
   --rail-text: #f2f2f3;
@@ -233,8 +233,8 @@ select:focus-visible,
   width: min(100% - 2.75rem, 45rem);
   margin: 1.15rem auto 1.75rem;
   padding: 2.4rem 2.4rem 3.4rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border: 0;
+  border-radius: 0;
   background: var(--paper);
   box-shadow: var(--shadow);
 }
@@ -490,7 +490,7 @@ select:focus-visible,
   margin-top: 0.2rem;
   border-radius: 2px;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
   font-size: 1.35rem;
   text-decoration: none;
 }
@@ -502,7 +502,7 @@ select:focus-visible,
   height: 1.7rem;
   border-radius: 2px;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .week-day small {
@@ -702,4 +702,13 @@ button.rounded-xl,
 button.rounded-full,
 button.rounded-2xl {
   border-radius: 2px;
+}
+
+.shadow,
+.shadow-sm,
+.shadow-md,
+.shadow-lg,
+.shadow-xl,
+.shadow-2xl {
+  box-shadow: none;
 }

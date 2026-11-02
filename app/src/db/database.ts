@@ -74,7 +74,8 @@ export async function loadSettings(): Promise<AppSettings> {
 
   const defaults: AppSettings & { id: string } = {
     id: 'main',
-    theme: 'system',
+    theme: 'light',
+    themeSet: true,
     language: 'cs',
     syncEnabled: false,
     syncUrl: '',
