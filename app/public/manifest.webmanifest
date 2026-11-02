@@ -1,0 +1,10 @@
+{
+  "name": "F.A.S.T Manager",
+  "short_name": "FAST",
+  "description": "Finally Awesome and Simple Task Manager",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f14",
+  "theme_color": "#14b8a6",
+  "lang": "cs"
+}

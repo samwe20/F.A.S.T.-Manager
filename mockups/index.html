@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F.A.S.T Manager — Mockupy</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --surface: #141a22;
+      --surface-2: #1c2430;
+      --border: #2a3444;
+      --text: #e8edf4;
+      --muted: #8b98a8;
+      --accent: #14b8a6;
+      --accent-soft: rgba(20, 184, 166, 0.15);
+      --task: #f59e0b;
+      --person: #06b6d4;
+      --project: #10b981;
+      --question: #8b5cf6;
+      --font: "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    header { background: linear-gradient(135deg, #0a1f1c, var(--bg)); border-bottom: 1px solid var(--border); padding: 28px 36px; }
+    header h1 { font-size: 26px; margin-bottom: 6px; }
+    header p { color: var(--muted); font-size: 14px; max-width: 640px; line-height: 1.6; }
+
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 36px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .tab { padding: 8px 16px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; }
+    .tab:hover { background: var(--surface-2); color: var(--text); }
+    .tab.active { background: var(--accent-soft); color: #5eead4; border-color: rgba(20,184,166,.35); }
+
+    .screen { display: none; padding: 24px 36px 48px; }
+    .screen.active { display: block; }
+    .label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 14px; }
+
+    .frame { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.4); background: var(--bg); }
+    .titlebar { height: 34px; background: #0d1117; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 12px; gap: 6px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+    .titlebar span { margin-left: 10px; font-size: 11px; color: var(--muted); }
+
+    .layout { display: grid; grid-template-columns: 220px 1fr 280px; height: 480px; }
+    .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 12px; }
+    .sidebar .logo { font-weight: 700; color: var(--accent); font-size: 16px; }
+    .sidebar .tagline { font-size: 10px; color: var(--muted); margin-bottom: 14px; }
+    .nav-item { padding: 8px 10px; border-radius: 8px; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .nav-item.active { background: var(--accent-soft); color: #5eead4; }
+    .section-label { font-size: 10px; text-transform: uppercase; color: var(--muted); margin: 12px 8px 6px; }
+
+    .topbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .search { flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 12px; color: var(--muted); }
+    .btn-icon { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); font-size: 12px; }
+    .btn-accent { background: var(--accent); color: #fff; border: none; }
+
+    .main { display: flex; flex-direction: column; overflow: hidden; }
+    .outliner { padding: 14px; overflow: auto; flex: 1; }
+    .node { display: flex; gap: 8px; padding: 8px; border-radius: 10px; margin-bottom: 4px; font-size: 13px; }
+    .node.selected { background: var(--accent-soft); border: 1px solid rgba(20,184,166,.25); }
+    .node:hover:not(.selected) { background: var(--surface-2); }
+    .checkbox { width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+    .checkbox.done { background: var(--accent); border-color: var(--accent); color: #fff; text-align: center; font-size: 10px; line-height: 14px; }
+    .tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px; margin-right: 4px; }
+    .tag-task { background: rgba(245,158,11,.2); color: var(--task); }
+    .tag-q { background: rgba(139,92,246,.2); color: var(--question); }
+    .indent { margin-left: 28px; }
+    .checklist { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+    .panel { background: var(--surface); border-left: 1px solid var(--border); padding: 14px; overflow: auto; font-size: 12px; }
+    .panel h3 { font-size: 14px; margin-bottom: 12px; }
+    .field { margin-bottom: 10px; }
+    .field-label { font-size: 10px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .field-val { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; }
+    .backlinks { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .backlinks li { list-style: none; padding: 6px 8px; border-radius: 6px; color: var(--muted); }
+    .backlinks li:hover { background: var(--surface-2); }
+
+    /* Modal screens */
+    .modal-bg { position: relative; height: 480px; background: rgba(0,0,0,.55); display: flex; align-items: flex-start; justify-content: center; padding-top: 60px; }
+    .modal { width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; box-shadow: 0 24px 80px rgba(0,0,0,.5); }
+    .modal h2 { font-size: 18px; margin-bottom: 4px; }
+    .modal p { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+    .modal input, .modal select { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 13px; margin-bottom: 12px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .modal-actions button { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); }
+    .modal-actions .primary { background: var(--accent); color: #fff; border: none; }
+
+    .palette { width: 480px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .palette-search { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .palette-search input { flex: 1; background: transparent; border: none; color: var(--text); outline: none; font-size: 13px; }
+    .palette-item { display: flex; justify-content: space-between; padding: 10px 16px; font-size: 13px; }
+    .palette-item.active { background: var(--accent-soft); color: #5eead4; }
+    .palette-item:hover { background: var(--surface-2); }
+    .kbd { font-size: 10px; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; }
+
+    .onboard { width: 400px; text-align: left; }
+    .dots { display: flex; gap: 6px; margin-bottom: 18px; }
+    .dots span { height: 4px; flex: 1; border-radius: 2px; background: var(--border); }
+    .dots span.on { background: var(--accent); }
+    .onboard-actions { display: flex; justify-content: space-between; margin-top: 22px; }
+
+    .shortcuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; max-width: 900px; margin-top: 20px; }
+    .shortcut-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+    .shortcut-card kbd { display: inline-block; margin-bottom: 6px; font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid var(--border); background: var(--surface-2); }
+    .shortcut-card p { font-size: 12px; color: var(--muted); }
+
+    .img-mockup { max-width: 100%; border-radius: 14px; border: 1px solid var(--border); margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>F.A.S.T Manager — Mockupy</h1>
+    <p>Finally Awesome and Simple Task Manager · Aktuální UI včetně quick capture, command palette, referencí, opakování a onboardingu.</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-screen="workspace">1. Hlavní workspace</button>
+    <button class="tab" data-screen="capture">2. Quick capture</button>
+    <button class="tab" data-screen="palette">3. Command palette</button>
+    <button class="tab" data-screen="panel">4. Panel + reference</button>
+    <button class="tab" data-screen="onboarding">5. Onboarding</button>
+    <button class="tab" data-screen="shortcuts">6. Klávesové zkratky</button>
+  </nav>
+
+  <!-- 1 Workspace -->
+  <section class="screen active" id="workspace">
+    <div class="label">Obrazovka — Outliner + TopBar + panel polí</div>
+    <div class="frame">
+      <div class="titlebar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span>F.A.S.T Manager</span></div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="logo">FAST</div>
+          <div class="tagline">Finally Awesome and Simple Task Manager</div>
+          <div class="nav-item active">📥 Inbox</div>
+          <div class="nav-item">📅 Dnes</div>
+          <div class="section-label">Dotazy</div>
+          <div class="nav-item">✅ Moje úkoly</div>
+          <div class="nav-item">❓ Otevřené otázky</div>
+          <div class="nav-item">⏰ Po termínu</div>
+          <div style="margin-top:auto;padding-top:20px">
+            <div style="background:var(--accent);color:#fff;text-align:center;padding:8px;border-radius:8px;font-size:12px;margin-bottom:6px">⚡ Rychlé zachycení</div>
+          </div>
+        </aside>
+        <div class="main">
+          <div class="topbar">
+            <div class="search">🔍 Hledat…</div>
+            <div class="btn-icon">↩</div>
+            <div class="btn-icon">↪</div>
+            <div class="btn-icon btn-accent">⚡</div>
+            <div class="btn-icon">⌘</div>
+          </div>
+          <div class="outliner">
+            <div class="node selected">
+              <div class="checkbox"></div>
+              <div>
+                <span class="tag tag-task">#Úkol</span>
+                Připravit mockupy pro klienta
+                <div class="checklist">☐ Revize barev &nbsp; ☐ Export PNG</div>
+              </div>
+            </div>
+            <div class="node indent">
+              <div class="checkbox done">✓</div>
+              <div><span class="tag tag-task">#Úkol</span> <span style="opacity:.5;text-decoration:line-through">Schválit název FAST</span></div>
+            </div>
+            <div class="node">
+              <div class="checkbox"></div>
+              <div><span class="tag tag-q">#Otázka</span> Jak nasadit sync server do Dockeru?</div>
+            </div>
+            <div class="node">
+              <div style="width:16px;height:16px;border-radius:50%;background:var(--muted);margin-top:4px;flex-shrink:0"></div>
+              <div><span class="tag" style="background:rgba(59,130,246,.2);color:#3b82f6">#Inform</span> Sync běží na portu 3847</div>
+            </div>
+          </div>
+        </div>
+        <aside class="panel">
+          <h3>Připravit mockupy</h3>
+          <div class="field"><div class="field-label">Termín</div><div class="field-val">2. 9. 2026</div></div>
+          <div class="field"><div class="field-label">Priorita</div><div class="field-val">Vysoká</div></div>
+          <div class="field"><div class="field-label">Opakování</div><div class="field-val">Žádné</div></div>
+          <div class="field"><div class="field-label">Připomínka</div><div class="field-val">1. 9. 2026 09:00</div></div>
+          <div class="field"><div class="field-label">Projekt</div><div class="field-val">F.A.S.T Manager ▾</div></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 Quick Capture -->
+  <section class="screen" id="capture">
+    <div class="label">Obrazovka — Rychlé zachycení (Ctrl+Shift+Space)</div>
+    <div class="frame">
+      <div class="titlebar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span>Quick Capture</span></div>
+      <div class="modal-bg">
+        <div class="modal">
+          <h2>Rychlé zachycení</h2>
+          <p>Ctrl+Shift+Space kdykoli · Tab v uzlu přidá checklist</p>
+          <input type="text" value="Volat Janovi ohledně smlouvy" placeholder="Co potřebujete udělat?" />
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <select><option>#Úkol</option><option>#Otázka</option><option>#Inform</option></select>
+            <input type="date" value="2026-09-02" />
+          </div>
+          <div class="field-label">Připomínka</div>
+          <input type="datetime-local" value="2026-09-01T09:00" />
+          <div class="modal-actions">
+            <button>Zrušit</button>
+            <button class="primary">Uložit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 Command Palette -->
+  <section class="screen" id="palette">
+    <div class="label">Obrazovka — Command palette (Ctrl+K)</div>
+    <div class="frame">
+      <div class="titlebar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span>Command Palette</span></div>
+      <div class="modal-bg">
+        <div class="palette">
+          <div class="palette-search">
+            <span>🔍</span>
+            <input type="text" placeholder="Hledat příkaz…" value="úkol" />
+            <span class="kbd">Esc</span>
+          </div>
+          <div class="palette-item active"><span>Rychlé zachycení</span><span class="kbd">Ctrl+Shift+Space</span></div>
+          <div class="palette-item"><span>Fulltextové hledání</span><span class="kbd">Ctrl+F</span></div>
+          <div class="palette-item"><span>Nový uzel</span><span class="kbd">Ctrl+N</span></div>
+          <div class="palette-item"><span>Dokončit úkol</span><span class="kbd">Ctrl+Enter</span></div>
+          <div class="palette-item"><span>Moje úkoly</span><span></span></div>
+          <div class="palette-item"><span>Synchronizovat</span><span></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 Panel + references -->
+  <section class="screen" id="panel">
+    <div class="label">Obrazovka — Reference picker + backlinks</div>
+    <div class="frame">
+      <div class="titlebar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span>Reference & Backlinks</span></div>
+      <div style="display:grid;grid-template-columns:1fr 320px;height:480px">
+        <div style="padding:20px;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center">Outliner (vybraný uzel s #Úkol)</div>
+        <aside class="panel">
+          <h3>Review s Janem Novákem</h3>
+          <span class="tag tag-task">#Úkol</span>
+          <div class="field" style="margin-top:14px">
+            <div class="field-label">Přiřazeno</div>
+            <div class="field-val" style="border-color:var(--accent)">Jan Novák ▾</div>
+            <div style="margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+              <div style="padding:8px 10px;background:var(--accent-soft);color:#5eead4">Jan Novák</div>
+              <div style="padding:8px 10px;color:var(--muted)">Marie Svobodová</div>
+              <div style="padding:8px 10px;color:var(--muted)">Projekt FAST MVP</div>
+            </div>
+          </div>
+          <div class="field"><div class="field-label">Projekt</div><div class="field-val">F.A.S.T Manager ▾</div></div>
+          <div class="backlinks">
+            <div class="field-label">Zpětné odkazy</div>
+            <ul>
+              <li>→ Schůzka s týmem ( #Schůzka )</li>
+              <li>→ Projekt FAST MVP ( #Projekt )</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 Onboarding -->
+  <section class="screen" id="onboarding">
+    <div class="label">Obrazovka — Onboarding (1/3)</div>
+    <div class="frame">
+      <div class="titlebar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span>Onboarding</span></div>
+      <div class="modal-bg" style="align-items:center;padding-top:0">
+        <div class="modal onboard">
+          <div class="dots"><span class="on"></span><span></span><span></span></div>
+          <h2>Vítejte v F.A.S.T Manager</h2>
+          <p>Task manager se supertagy — jednodušeji než Tana. Každý uzel může mít typ (#Task, #Question, #Inform…) s vlastními poli.</p>
+          <div class="onboard-actions">
+            <button style="background:none;border:none;color:var(--muted);cursor:pointer">Přeskočit</button>
+            <button class="primary" style="padding:8px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer">Další →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 Shortcuts -->
+  <section class="screen" id="shortcuts">
+    <div class="label">Klávesové zkratky — implementované v aplikaci</div>
+    <div class="shortcuts">
+      <div class="shortcut-card"><kbd>Ctrl+Shift+Space</kbd><p>Rychlé zachycení</p></div>
+      <div class="shortcut-card"><kbd>Ctrl+K</kbd><p>Command palette</p></div>
+      <div class="shortcut-card"><kbd>Ctrl+F</kbd><p>Fulltextové hledání</p></div>
+      <div class="shortcut-card"><kbd>Ctrl+N</kbd><p>Nový uzel</p></div>
+      <div class="shortcut-card"><kbd>Ctrl+Enter</kbd><p>Dokončit úkol</p></div>
+      <div class="shortcut-card"><kbd>Ctrl+Z / Ctrl+Y</kbd><p>Undo / Redo</p></div>
+      <div class="shortcut-card"><kbd>Tab</kbd><p>Přidat checklist řádek v uzlu</p></div>
+      <div class="shortcut-card"><kbd>Drag</kbd><p>Přesun uzlu (Shift = vnořit)</p></div>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.screen).classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
