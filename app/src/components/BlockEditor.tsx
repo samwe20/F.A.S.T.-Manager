@@ -6,6 +6,7 @@ import { captureChoices, lineCaptures, openShortcut, type LinePiece } from '../u
 import { getIcon } from '../utils/icons';
 import { objectTitle } from '../utils/nodeUtils';
 import { isStandaloneUrl, urlsInText } from '../utils/weblink';
+import { DocumentEditor } from './DocumentEditor';
 import { ObjectCard } from './ObjectCard';
 
 interface BlockEditorProps {
@@ -425,9 +426,25 @@ export function BlockEditor({
     commit(moveBlock(current, from, to));
   };
 
+  if (documentMode) {
+    return (
+      <DocumentEditor
+        blocks={blocks}
+        nodes={nodes}
+        objectTypes={objectTypes}
+        onChange={onChange}
+        onOpen={onOpen}
+        onCreateObject={onCreateObject}
+        onCreateWeblink={onCreateWeblink}
+        onCreateImage={onCreateImage}
+        placeholder={placeholder}
+      />
+    );
+  }
+
   return (
     <div
-      className={`block-editor ${documentMode ? 'is-document space-y-0' : 'mt-6 space-y-1'}`}
+      className="block-editor mt-6 space-y-1"
       onMouseDown={(event) => {
         if (!documentMode) return;
         const target = event.target as HTMLElement;

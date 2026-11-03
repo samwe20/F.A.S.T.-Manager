@@ -537,6 +537,70 @@ select:focus-visible,
   margin-top: 1.5rem;
 }
 
+.doc-flow,
+.doc-flow:focus,
+.doc-flow:focus-visible {
+  min-height: calc(100dvh - 16rem);
+  outline: none;
+  font-size: 17px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.doc-flow p,
+.doc-flow div {
+  margin: 0;
+  min-height: 1.75em;
+}
+
+.doc-flow[data-empty='true']::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.capture-name {
+  background: var(--accent-soft);
+  border-radius: 2px;
+  padding: 0 0.2rem;
+}
+
+.capture-name.is-empty::before {
+  content: attr(data-label);
+  color: var(--muted);
+}
+
+.inline-object {
+  background: var(--accent-soft);
+  border-radius: 2px;
+  padding: 0 0.12rem;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+  cursor: pointer;
+}
+
+.doc-menu {
+  position: fixed;
+  z-index: 30;
+  width: 16rem;
+  border: 1px solid var(--border);
+  background: var(--paper);
+}
+
+.doc-menu button {
+  display: flex;
+  width: 100%;
+  gap: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+  font-size: 14px;
+}
+
+.doc-menu button span {
+  width: 2.6rem;
+  color: var(--muted);
+}
+
 .block-editor.is-document .block-input {
   font-size: 17px;
   line-height: 1.75;
