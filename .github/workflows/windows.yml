@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - cursor/inline-slash-links-950a
+      - cursor/daily-note-no-task-tile-950a
     paths:
       - "app/**"
       - ".github/workflows/windows.yml"
