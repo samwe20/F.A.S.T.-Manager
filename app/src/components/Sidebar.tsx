@@ -60,7 +60,7 @@ export function Sidebar() {
               return (
                 <button key={type.id} type="button" onClick={() => openType(type.id)} className={`ui-nav ${active ? 'is-active' : ''}`}>
                   <Icon size={14} strokeWidth={1.5} color={ink} />
-                  <span className="min-w-0 flex-1 truncate" style={{ color: ink }}>{t(`supertags.${type.id}`, type.name)}</span>
+                  <span className="min-w-0 flex-1 truncate">{t(`supertags.${type.id}`, type.name)}</span>
                   <span className="text-[12px] opacity-70">{count}</span>
                 </button>
               );

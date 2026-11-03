@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '../src/db/database';
 import { createWeblinkObject, ensureObjectModel } from '../src/services/objectModel';
 import type { NodeRecord } from '../src/types';
-import { isStandaloneUrl, weblinkTitle } from '../src/utils/weblink';
+import { isStandaloneUrl, urlsInText, weblinkTitle } from '../src/utils/weblink';
 
 describe('weblink helpers', () => {
   it('accepts a lone http or https address', () => {
@@ -19,6 +19,14 @@ describe('weblink helpers', () => {
     expect(isStandaloneUrl('')).toBe(false);
   });
 
+  it('finds an address inside a sentence and ignores one already linked', () => {
+    expect(urlsInText('podívej https://capacities.io/docs, prosím').map((item) => item.url)).toEqual([
+      'https://capacities.io/docs',
+    ]);
+    expect(urlsInText('už je [[abcdef12-3456-7890-abcd-ef1234567890]]')).toEqual([]);
+    expect(urlsInText('https://example.com')).toEqual([{ url: 'https://example.com', start: 0, end: 'https://example.com'.length }]);
+  });
+
   it('builds a short title from host and path', () => {
     expect(weblinkTitle('https://www.example.com/docs/')).toBe('example.com/docs');
     expect(weblinkTitle('https://example.com/')).toBe('example.com');
@@ -29,6 +37,16 @@ describe('weblink objects', () => {
   beforeEach(async () => {
     await db.delete();
     await db.open();
+  });
+
+  it('stores one object even when the same address arrives twice at once', async () => {
+    const [first, second] = await Promise.all([
+      createWeblinkObject('default', 'https://example.com/notes'),
+      createWeblinkObject('default', 'https://example.com/notes'),
+    ]);
+    expect(second.id).toBe(first.id);
+    const rows = await db.nodes.filter((node) => node.typeId === 'weblink').toArray();
+    expect(rows).toHaveLength(1);
   });
 
   it('stores the address once and reuses the same object', async () => {

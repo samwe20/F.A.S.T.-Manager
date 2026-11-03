@@ -27,6 +27,7 @@ import {
   createCollection,
   createObjectType,
   createThemeTag,
+  createImageObject,
   createWeblinkObject,
   ensureDailyNote,
   ensureObjectModel,
@@ -183,6 +184,7 @@ interface AppState {
   createTag: (name: string) => Promise<void>;
   ensureTag: (name: string) => Promise<string | undefined>;
   createWeblink: (url: string) => Promise<string | undefined>;
+  createImage: (file: File) => Promise<string | undefined>;
   attachMedia: (nodeId: string, typeId: string, file: File) => Promise<void>;
   setMediaProperty: (nodeId: string, typeId: string, key: string, file: File) => Promise<void>;
   vaultError: string | null;
@@ -245,7 +247,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       } catch (err) {
         vaultError = err instanceof Error ? err.message : String(err);
       }
-      const settings = await loadSettings();
+      let settings = await loadSettings();
+      if (!settings.themeSet) {
+        settings = { ...settings, theme: settings.theme === 'dark' ? 'dark' : 'light', themeSet: true };
+        await saveSettings(settings);
+      }
       const [workspaces, queries, objectTypes, collections, templates] = await Promise.all([
         getWorkspaces(),
         getQueries(),
@@ -525,7 +531,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateSettings: async (patch) => {
     const current = get().settings;
     if (!current) return;
-    const next = { ...current, ...patch };
+    const next = { ...current, ...patch, ...(patch.theme ? { themeSet: true } : {}) };
     await saveSettings(next);
     if (patch.theme) get().applyTheme(patch.theme);
     if (patch.language) {
@@ -825,6 +831,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { settings } = get();
     if (!settings || !url.trim()) return undefined;
     const node = await get().withHistory(async () => createWeblinkObject(settings.workspaceId, url.trim()));
+    await get().refresh();
+    return node.id;
+  },
+
+  createImage: async (file) => {
+    const { settings } = get();
+    if (!settings || !file) return undefined;
+    const mediaId = await saveMediaFile(file);
+    const title = file.name.replace(/\.[^.]+$/, '').trim() || file.name || 'image';
+    const node = await get().withHistory(async () => createImageObject(settings.workspaceId, blobRef(mediaId), title));
     await get().refresh();
     return node.id;
   },

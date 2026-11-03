@@ -166,6 +166,8 @@ export interface AppSettings {
   vaultLabel?: string | null;
   /** Stretch the reading column past the default 45rem. */
   wideLayout?: boolean;
+  /** Set after the user picks a theme, or after the white look becomes the default. */
+  themeSet?: boolean;
 }
 
 export interface QuickCaptureInput {
