@@ -20,6 +20,7 @@ interface BlockEditorProps {
   onCreateImage?: (file: File) => Promise<string | undefined>;
   /** Daily note: a plain page of text, without outliner controls. */
   documentMode?: boolean;
+  placeholder?: string;
 }
 
 const BLOCK_SLASH: { id: string; type: BlockType; level?: 1 | 2 | 3; labelKey: string }[] = [
@@ -42,6 +43,7 @@ export function BlockEditor({
   onCreateObject,
   onCreateImage,
   documentMode = false,
+  placeholder,
 }: BlockEditorProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(blocks);
@@ -483,7 +485,7 @@ export function BlockEditor({
                         naming?.blockId === block.id
                           ? t(`supertags.${naming.typeId}`)
                           : index === draft.length - 1
-                            ? t('blocks.placeholder')
+                            ? (placeholder || t('blocks.placeholder'))
                             : ''
                       }
                       onChange={(event) => updateText(index, event.target.value)}

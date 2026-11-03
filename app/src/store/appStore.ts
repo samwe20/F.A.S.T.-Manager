@@ -180,7 +180,7 @@ interface AppState {
   saveTypeTemplate: (input: { typeId: string; name: string; title: string; fieldValues: Record<string, string | number | boolean>; blocks: Block[] }) => Promise<void>;
   saveNewQuery: (input: { name: string; expression: QueryExpression }) => Promise<void>;
   openDaily: (date: string) => Promise<void>;
-  createObjectFromLine: (typeId: string, title: string, dueDate?: string) => Promise<string | undefined>;
+  createObjectFromLine: (typeId: string, title: string, dueDate?: string, links?: { personId?: string; projectId?: string }) => Promise<string | undefined>;
   createTag: (name: string) => Promise<void>;
   ensureTag: (name: string) => Promise<string | undefined>;
   createWeblink: (url: string) => Promise<string | undefined>;
@@ -870,13 +870,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ selectedNodeId: note.id, activeView: 'object', returnView: 'calendar', returnNodeId: null });
   },
 
-  createObjectFromLine: async (typeId, title, dueDate) => {
+  createObjectFromLine: async (typeId, title, dueDate, links) => {
     const { settings, objectTypes } = get();
     if (!settings) return undefined;
     if (typeId === 'tag' || typeId === 'folder' || typeId === 'dailyNote') return undefined;
     const type = objectTypes.find((item) => item.id === typeId);
     if (!type) return undefined;
-    const fields = fieldsForLineObject(type, dueDate);
+    const fields = fieldsForLineObject(type, dueDate, links);
     const trimmed = title.trim();
     const node = await get().withHistory(() =>
       createNode({
@@ -887,7 +887,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         typeId,
         supertagIds: [typeId],
         fieldValues: { [typeId]: fields },
-        blocks: [{ ...emptyBlock(), text: trimmed }],
+        blocks: [emptyBlock()],
       }),
     );
     await get().refresh();

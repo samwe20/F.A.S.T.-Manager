@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NodeRecord } from '../src/types';
-import { dayPreviewNodes, previewSnippet } from '../src/utils/nodeUtils';
+import { dayPreviewNodes, previewSnippet, tasksAssignedTo } from '../src/utils/nodeUtils';
 
 const link = '22222222-2222-2222-2222-222222222222';
 
@@ -89,5 +89,14 @@ describe('day previews', () => {
       }),
     );
     expect(dayPreviewNodes(notes, '2026-11-02', []).map((item) => item.id)).toHaveLength(12);
+  });
+});
+
+describe('tasks on a person', () => {
+  it('keeps only tasks assigned to that person', () => {
+    const petr = node({ id: 'petr', typeId: 'person', title: 'Petr' });
+    const his = node({ id: 't1', typeId: 'task', title: 'Zavolat', fieldValues: { task: { assignee: 'petr' } } });
+    const other = node({ id: 't2', typeId: 'task', title: 'Jiný', fieldValues: { task: { assignee: 'jana' } } });
+    expect(tasksAssignedTo([petr, his, other], 'petr').map((item) => item.id)).toEqual(['t1']);
   });
 });

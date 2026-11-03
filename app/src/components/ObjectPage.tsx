@@ -8,7 +8,7 @@ import type { FieldDef } from '../types';
 import { splitIds, joinIds } from '../utils/blocks';
 import { labelInk } from '../utils/color';
 import { getIcon } from '../utils/icons';
-import { blocksWithTag, dayTodoBlocks, displayTitle, getReferenceCandidates, getUnlinkedMentions, objectTitle, resolveLinks } from '../utils/nodeUtils';
+import { blocksWithTag, dayTodoBlocks, displayTitle, getReferenceCandidates, getUnlinkedMentions, objectTitle, resolveLinks, tasksAssignedTo } from '../utils/nodeUtils';
 import { BlockEditor } from './BlockEditor';
 import { FieldEditor } from './FieldEditor';
 
@@ -84,6 +84,7 @@ export function ObjectPage() {
         )
       : [];
   const dayChecks = node.typeId === 'dailyNote' && dayKey ? dayTodoBlocks(nodes, dayKey, [node.id]) : [];
+  const personTasks = node.typeId === 'person' ? tasksAssignedTo(nodes, node.id) : [];
   const backlinks = getNodeBacklinks(node.id);
   const taggedBlocks = node.typeId === 'tag' ? blocksWithTag(nodes, node.id) : [];
   const mentions = getUnlinkedMentions(nodes, node);
@@ -300,6 +301,19 @@ export function ObjectPage() {
         </div>
       )}
 
+      {personTasks.length > 0 && (
+        <section className="mt-8">
+          <div className="quiet-label">{t('object.tasksHere')}</div>
+          <div className="mt-2 space-y-1">
+            {personTasks.map((task) => (
+              <button key={task.id} type="button" className="block text-left text-[15px] hover:underline" onClick={() => openObject(task.id)}>
+                {displayTitle(nodes, task) || t('object.untitled')}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <BlockEditor
         blocks={node.blocks?.length ? node.blocks : [{ id: `${node.id}-empty`, type: 'paragraph', text: '' }]}
         nodes={nodes}
@@ -308,8 +322,16 @@ export function ObjectPage() {
         onEnsureTag={ensureTag}
         onCreateWeblink={createWeblink}
         onCreateImage={createImage}
-        onCreateObject={(typeId, objectTitle) => createObjectFromLine(typeId, objectTitle, dayKey || undefined)}
-        documentMode={node.typeId === 'dailyNote'}
+        onCreateObject={(typeId, objectTitle) =>
+          createObjectFromLine(
+            typeId,
+            objectTitle,
+            dayKey || undefined,
+            node.typeId === 'person' ? { personId: node.id } : node.typeId === 'project' ? { projectId: node.id } : undefined,
+          )
+        }
+        documentMode={node.typeId === 'dailyNote' || node.typeId === 'person'}
+        placeholder={node.typeId === 'person' ? t('blocks.placeholderPerson') : undefined}
         onChange={(blocks) => void saveObjectBody(node.id, title, blocks)}
       />
 

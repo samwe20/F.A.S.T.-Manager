@@ -89,7 +89,6 @@ export function CalendarView() {
         <div className="week-row">
           {week.map((key) => {
             const day = new Date(`${key}T12:00:00`);
-            const count = nodes.filter((node) => nodeTouchesDay(node, key)).length;
             return (
               <button
                 key={key}
@@ -99,7 +98,6 @@ export function CalendarView() {
               >
                 <small>{new Intl.DateTimeFormat(i18n.language, { weekday: 'short' }).format(day)}</small>
                 <strong>{day.getDate()}</strong>
-                {count > 0 && <small>{count}</small>}
               </button>
             );
           })}

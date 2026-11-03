@@ -65,6 +65,12 @@ function fieldPointsAt(value: string | number | boolean, targetId: string): bool
   return splitIds(value).includes(targetId);
 }
 
+export function tasksAssignedTo(nodes: NodeRecord[], personId: string): NodeRecord[] {
+  return nodes.filter(
+    (node) => !node.deleted && node.typeId === 'task' && String(node.fieldValues.task?.assignee ?? '') === personId,
+  );
+}
+
 export function getBacklinks(nodes: NodeRecord[], targetId: string): NodeRecord[] {
   return nodes.filter((node) => {
     if (node.id === targetId) return false;

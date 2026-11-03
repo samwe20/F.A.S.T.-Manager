@@ -81,6 +81,8 @@ Denní poznámka je textový editor. Píše se do ní věta jako do Capacities. 
 
 Objekt vznikne jen ze zkratky. /o a Enter znamená, že další řádek je jméno osoby. Honza Krulda a Enter osobu uloží a do textu vloží odkaz [[id]]. Stejně /u úkol, /pro projekt, /s schůzka, /poz poznámka a /? otázka. Zkratka a jméno na jednom řádku, třeba /o Honza Krulda a Enter, uloží objekt hned. /p samo o sobě nic nezaloží, protože sedí na projekt i poznámku. Celé slovo typu funguje stejně jako zkratka: /osoba, /úkol, /projekt, /schůzka, /poznámka, /otázka. Věta, která zkratkou nezačíná, zůstane obyčejný text, i když v ní jsou lomítka.
 
+Na stránce osoby jsou vypsané úkoly, které mají v Přiřazeno tuto osobu. /u napsané na té stránce takový úkol založí. Na stránce projektu /u zapíše úkol do vlastnosti Projekt.
+
 Na denní poznámce nejsou úchyty pro přesun, odsazení ani štítek pod řádkem. Enter založí další odstavec. Úkol z denní poznámky dostane dueDate toho dne. Ostatní stránky mají stejné zkratky a navíc druhy bloků (odstavec, nadpis, odrážka, zaškrtnutí, citát).
 
 Obrázek vložený ze schránky nebo puštěný na text se sám uloží jako objekt typu obrázek a v textu se ukáže. Odkaz http nebo https se uloží jako objekt odkaz. Když je řádek jen ten odkaz, stane se z něj karta. Když je odkaz uvnitř věty, věta zůstane a objekt se uloží zvlášť.
@@ -101,7 +103,7 @@ Denní poznámka: když se název rovná datu, nadpis je dlouhé datum a nad ní
 
 Pod nadpisem a úkoly dne je jen textové pole. Mřížka náhledů se na denní poznámce nekreslí. Štítek denní poznámky se v tom poli nepřidává.
 
-Kalendář je po otevření týden. Klik na den volá openDaily. Denní poznámky se v seznamu dat neopakují. ISO názvy se formátují jako dlouhé datum. Dnešek je černý čtverec s bílým textem.
+Kalendář je po otevření týden. Klik na den volá openDaily. Pod číslem dne není počet objektů. Denní poznámky se v seznamu dat neopakují. ISO názvy se formátují jako dlouhé datum. Dnešek je černý čtverec s bílým textem.
 
 Ctrl+Shift+Space, Ctrl+N a příkazy palety pro dnešek, inbox a plánované otevřou dnešní poznámku. Paleta nemá novou složku, nový dokument ani uložené úkolové dotazy. Rychlý zápis je namontovaný, ale nemá viditelný vstup.
 
