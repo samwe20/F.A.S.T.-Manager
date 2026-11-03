@@ -2,18 +2,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, 
 import { useTranslation } from 'react-i18next';
 import type { Block, BlockType, NodeRecord, ObjectTypeRecord } from '../types';
 import { adjustIndent, clampIndent, embedIdFromText, emptyBlock, isEmbedText, moveBlock, slashPick, slashQuery, slashChoices } from '../utils/blocks';
-import i18n from '../i18n';
-import {
-  activeSlashToken,
-  matchObjects,
-  planMention,
-  slashTokens,
-  type SlashToken,
-  type SlashTypeRef,
-} from '../utils/slashLine';
+import { captureChoices, parseCapture } from '../utils/capture';
 import { getIcon } from '../utils/icons';
 import { objectTitle } from '../utils/nodeUtils';
-import { isStandaloneUrl } from '../utils/weblink';
+import { isStandaloneUrl, urlsInText } from '../utils/weblink';
 import { ObjectCard } from './ObjectCard';
 
 interface BlockEditorProps {
@@ -24,11 +16,10 @@ interface BlockEditorProps {
   onOpen: (id: string) => void;
   onEnsureTag?: (name: string) => Promise<string | undefined>;
   onCreateWeblink?: (url: string) => Promise<string | undefined>;
-  onCommitSlashLine?: (
-    text: string,
-    forcedTypeId?: string,
-  ) => Promise<{ kind: 'none' } | { kind: 'object'; id: string } | { kind: 'text'; text: string }>;
-  onEnsureSlashMention?: (name: string, typeId: string) => Promise<string | undefined>;
+  onCreateObject?: (typeId: string, title: string) => Promise<string | undefined>;
+  onCreateImage?: (file: File) => Promise<string | undefined>;
+  /** Daily note: a plain page of text, without outliner controls. */
+  documentMode?: boolean;
 }
 
 const BLOCK_SLASH: { id: string; type: BlockType; level?: 1 | 2 | 3; labelKey: string }[] = [
@@ -48,12 +39,14 @@ export function BlockEditor({
   onOpen,
   onEnsureTag,
   onCreateWeblink,
-  onCommitSlashLine,
-  onEnsureSlashMention,
+  onCreateObject,
+  onCreateImage,
+  documentMode = false,
 }: BlockEditorProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(blocks);
   const [slash, setSlash] = useState<number | null>(null);
+  const [naming, setNaming] = useState<{ blockId: string; typeId: string } | null>(null);
   const [linkAt, setLinkAt] = useState<{ index: number; query: string } | null>(null);
   const [tagAt, setTagAt] = useState<number | null>(null);
   const [tagQuery, setTagQuery] = useState('');
@@ -104,38 +97,6 @@ export function BlockEditor({
       .slice(0, 8);
   }, [nodes, tagAt, tagQuery]);
 
-  const slashTypeRefs = useMemo<SlashTypeRef[]>(
-    () =>
-      objectTypes
-        .filter((type) => !type.deleted)
-        .map((type) => ({
-          id: type.id,
-          names: [
-            type.name,
-            String(i18n.t(`supertags.${type.id}`, { lng: 'cs', defaultValue: type.name })),
-            String(i18n.t(`supertags.${type.id}`, { lng: 'en', defaultValue: type.name })),
-          ],
-        })),
-    [objectTypes],
-  );
-
-  const objectCandidates = useMemo(
-    () => slashTypeRefs.filter((type) => type.id !== 'tag' && type.id !== 'folder' && type.id !== 'dailyNote'),
-    [slashTypeRefs],
-  );
-
-  const mentionCandidates = useMemo(
-    () =>
-      nodes
-        .filter((node) => !node.deleted && node.typeId && node.typeId !== 'tag' && node.typeId !== 'folder' && node.typeId !== 'dailyNote')
-        .map((node) => ({
-          id: node.id,
-          typeId: node.typeId ?? '',
-          names: [objectTitle(node), ...(node.aliases ?? [])].map((name) => name.trim()).filter(Boolean),
-        })),
-    [nodes],
-  );
-
   const blockCandidates = useMemo(
     () => BLOCK_SLASH.map((item) => ({ id: item.id, names: [t(item.labelKey)] })),
     [t],
@@ -163,7 +124,8 @@ export function BlockEditor({
     const next = draftRef.current.map((block, i) => (i === index ? { ...block, text } : block));
     draftRef.current = next;
     setDraft(next);
-    if (activeSlashToken(text)) setSlash(index);
+    const namingHere = naming?.blockId === draftRef.current[index]?.id;
+    if (!namingHere && text.startsWith('/') && !text.slice(1).includes(' ') && !parseCapture(text)?.title) setSlash(index);
     else if (slash === index) setSlash(null);
     const mention = text.match(/(?:@|\[\[)([^\]\n]*)$/);
     if (mention) setLinkAt({ index, query: mention[1] ?? '' });
@@ -188,54 +150,90 @@ export function BlockEditor({
     commit(draftRef.current.map((block, i) => (i === index ? { ...block, text } : block)));
   };
 
-  const replaceToken = (index: number, token: SlashToken, value: string) => {
+  const beginNaming = (index: number, typeId: string) => {
     const current = draftRef.current[index];
     if (!current) return;
-    const spacer = token.end === current.text.length ? ' ' : '';
-    const text = `${current.text.slice(0, token.start)}${value}${spacer}${current.text.slice(token.end)}`;
-    pendingRef.current = true;
-    pendingText.current = value;
     setSlash(null);
-    commit(draftRef.current.map((block, i) => (i === index ? { ...block, text } : block)));
+    setNaming({ blockId: current.id, typeId });
+    focusId.current = current.id;
+    commit(draftRef.current.map((block, i) => (i === index ? { ...block, text: '' } : block)));
   };
 
-  const runSlashLine = async (index: number, text: string, forcedTypeId?: string) => {
-    if (!onCommitSlashLine) return false;
+  const finishObject = async (index: number, typeId: string, title: string) => {
+    const trimmed = title.trim();
+    if (!trimmed || !onCreateObject) return false;
     pendingRef.current = true;
     try {
-      const outcome = await onCommitSlashLine(text, forcedTypeId);
-      if (!outcome || outcome.kind === 'none') {
-        pendingRef.current = false;
-        return false;
-      }
-      if (outcome.kind === 'object') {
-        setSlash(null);
-        pendingText.current = `[[${outcome.id}]]`;
-        commit(draftRef.current.map((block, i) => (i === index ? { ...block, text: `[[${outcome.id}]]` } : block)));
-        return true;
-      }
+      const id = await onCreateObject(typeId, trimmed);
       const current = draftRef.current[index];
-      if (!current) {
+      if (!id || !current) {
         pendingRef.current = false;
         return false;
       }
-      const marker = outcome.text.match(/\[\[[0-9a-fA-F-]{8,}\]\]/)?.[0];
-      pendingText.current = marker ?? outcome.text;
-      const updated = { ...current, text: outcome.text };
-      if (isEmbedText(outcome.text)) {
-        setSlash(null);
-        commit(draftRef.current.map((block, i) => (i === index ? updated : block)));
-        return true;
-      }
-      const created = emptyBlock(current.type === 'todo' || current.type === 'bullet' ? current.type : 'paragraph');
+      pendingText.current = `[[${id}]]`;
+      const created = emptyBlock('paragraph');
       created.indent = clampIndent(current.indent);
       const next = [...draftRef.current];
-      next[index] = updated;
+      next[index] = { ...current, text: `[[${id}]]`, linkView: typeId === 'image' ? 'card' : 'glyph' };
       next.splice(index + 1, 0, created);
       focusId.current = created.id;
+      setNaming(null);
       setSlash(null);
       commit(next);
       return true;
+    } catch (error) {
+      pendingRef.current = false;
+      throw error;
+    }
+  };
+
+  const rememberUrls = (text: string) => {
+    if (!onCreateWeblink) return;
+    for (const hit of urlsInText(text)) void onCreateWeblink(hit.url);
+  };
+
+  const imageFilesFrom = (data: DataTransfer | null): File[] => {
+    if (!data) return [];
+    const fromFiles = [...data.files].filter((file) => file.type.startsWith('image/'));
+    if (fromFiles.length) return fromFiles;
+    const found: File[] = [];
+    for (const item of data.items) {
+      if (item.kind !== 'file' || !item.type.startsWith('image/')) continue;
+      const file = item.getAsFile();
+      if (file) found.push(file);
+    }
+    return found;
+  };
+
+  const insertImages = async (index: number, files: File[]) => {
+    if (!onCreateImage || files.length === 0) return;
+    pendingRef.current = true;
+    try {
+      const ids: string[] = [];
+      for (const file of files) {
+        const id = await onCreateImage(file);
+        if (id) ids.push(id);
+      }
+      const current = draftRef.current[index];
+      if (!ids.length || !current) {
+        pendingRef.current = false;
+        return;
+      }
+      pendingText.current = `[[${ids[0]}]]`;
+      const imageBlocks = ids.map((id) => ({ ...emptyBlock(), text: `[[${id}]]`, linkView: 'card' as const }));
+      const next = [...draftRef.current];
+      if (!current.text.trim()) {
+        const follow = emptyBlock('paragraph');
+        next.splice(index, 1, ...imageBlocks, follow);
+        focusId.current = follow.id;
+      } else {
+        const follow = emptyBlock('paragraph');
+        follow.indent = clampIndent(current.indent);
+        next.splice(index + 1, 0, ...imageBlocks, follow);
+        focusId.current = follow.id;
+      }
+      setSlash(null);
+      commit(next);
     } catch (error) {
       pendingRef.current = false;
       throw error;
@@ -246,12 +244,19 @@ export function BlockEditor({
     if (!onCreateWeblink) return false;
     pendingRef.current = true;
     const id = await onCreateWeblink(url.trim());
-    if (!id) {
+    const current = draftRef.current[index];
+    if (!id || !current) {
       pendingRef.current = false;
       return false;
     }
     pendingText.current = `[[${id}]]`;
-    const next = draftRef.current.map((block, i) => (i === index ? { ...block, text: `[[${id}]]` } : block));
+    const created = emptyBlock('paragraph');
+    created.indent = clampIndent(current.indent);
+    const next = [...draftRef.current];
+    next[index] = { ...current, text: `[[${id}]]`, linkView: 'glyph' };
+    next.splice(index + 1, 0, created);
+    focusId.current = created.id;
+    setSlash(null);
     commit(next);
     return true;
   };
@@ -350,7 +355,7 @@ export function BlockEditor({
   };
 
   return (
-    <div className="mt-6 space-y-1">
+    <div className={`block-editor mt-6 ${documentMode ? 'is-document space-y-0' : 'space-y-1'}`}>
       {draft.map((block, index) => {
         const embedTarget = embedIdFromText(block.text);
         const embedded = embedTarget !== null && isEmbedText(block.text);
@@ -365,10 +370,19 @@ export function BlockEditor({
               setDropId(block.id);
             }}
             onDragLeave={() => setDropId((current) => (current === block.id ? null : current))}
-            onDrop={(event) => onDrop(block.id, event)}
+            onDrop={(event) => {
+              const images = imageFilesFrom(event.dataTransfer);
+              if (images.length && onCreateImage) {
+                event.preventDefault();
+                setDropId(null);
+                void insertImages(index, images);
+                return;
+              }
+              onDrop(block.id, event);
+            }}
           >
             <div className={`flex items-start gap-1 ${dropId === block.id ? 'bg-[var(--surface-2)]' : ''}`}>
-              <div className="mt-1 flex w-4 shrink-0 flex-col">
+              {!documentMode && <div className="mt-1 flex w-4 shrink-0 flex-col">
                 <button
                   type="button"
                   draggable
@@ -394,7 +408,7 @@ export function BlockEditor({
                 <button type="button" className="block-tool" aria-label={t('blocks.outdent')} onMouseDown={(event) => event.preventDefault()} onClick={() => indentBy(index, -1)}>
                   <Outdent size={12} />
                 </button>
-              </div>
+              </div>}
               <div className="min-w-0 flex-1">
                 <div
                   className={[
@@ -423,73 +437,135 @@ export function BlockEditor({
                         objectTypes={objectTypes}
                         nodes={nodes}
                         linkView={block.linkView}
+                        quiet={documentMode}
                         onOpen={onOpen}
-                        onLinkView={(linkView) => {
-                          commit(draftRef.current.map((item, i) => (i === index ? { ...item, linkView } : item)));
-                        }}
+                        onLinkView={
+                          documentMode
+                            ? undefined
+                            : (linkView) => {
+                                commit(draftRef.current.map((item, i) => (i === index ? { ...item, linkView } : item)));
+                              }
+                        }
                         onKeyDown={(event) => onStructuralKey(event, index, block, 'card')}
                       />
-                      <button
-                        type="button"
-                        className="block-tool mt-1 text-[10px]"
-                        aria-label={t('blocks.removeEmbed')}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => removeAt(index)}
-                      >
-                        {t('blocks.removeEmbed')}
-                      </button>
+                      {!documentMode && (
+                        <button
+                          type="button"
+                          className="block-tool mt-1 text-[10px]"
+                          aria-label={t('blocks.removeEmbed')}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => removeAt(index)}
+                        >
+                          {t('blocks.removeEmbed')}
+                        </button>
+                      )}
                     </div>
                   ) : (
+                    <div className="min-w-0 flex-1">
+                    {naming?.blockId === block.id && (
+                      <div className="capture-kind">{t(`supertags.${naming.typeId}`)}</div>
+                    )}
                     <textarea
                       id={`block-${block.id}`}
                       rows={1}
                       value={block.text}
-                      placeholder={index === draft.length - 1 ? t('blocks.placeholder') : ''}
+                      placeholder={
+                        naming?.blockId === block.id
+                          ? t(`supertags.${naming.typeId}`)
+                          : index === draft.length - 1
+                            ? t('blocks.placeholder')
+                            : ''
+                      }
                       onChange={(event) => updateText(index, event.target.value)}
                       onPaste={(event) => {
+                        const images = imageFilesFrom(event.clipboardData);
+                        if (images.length && onCreateImage) {
+                          event.preventDefault();
+                          void insertImages(index, images);
+                          return;
+                        }
                         const pasted = event.clipboardData.getData('text');
                         const replacingEmpty = block.text.trim() === '' || isStandaloneUrl(block.text);
-                        if (!onCreateWeblink || !isStandaloneUrl(pasted) || !replacingEmpty) return;
-                        event.preventDefault();
-                        void turnIntoWeblink(index, pasted);
+                        if (onCreateWeblink && isStandaloneUrl(pasted) && replacingEmpty) {
+                          event.preventDefault();
+                          void turnIntoWeblink(index, pasted);
+                          return;
+                        }
+                        if (pasted && urlsInText(pasted).length) {
+                          const start = event.currentTarget.selectionStart ?? block.text.length;
+                          const end = event.currentTarget.selectionEnd ?? start;
+                          rememberUrls(`${block.text.slice(0, start)}${pasted}${block.text.slice(end)}`);
+                        }
                       }}
                       onBlur={() => {
                         if (pendingRef.current || slash !== null || linkAt !== null) return;
+                        const text = draftRef.current[index]?.text ?? '';
+                        if (naming?.blockId !== block.id && isStandaloneUrl(text) && onCreateWeblink) {
+                          void turnIntoWeblink(index, text);
+                          return;
+                        }
+                        if (naming?.blockId !== block.id) rememberUrls(text);
                         onChange(draftRef.current);
                       }}
                       onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                          if (naming?.blockId === block.id) {
+                            event.preventDefault();
+                            setNaming(null);
+                            return;
+                          }
+                          if (slash === index) setSlash(null);
+                        }
                         if (onStructuralKey(event, index, block, 'input')) return;
                         if (event.key === 'Enter' && !event.shiftKey) {
                           event.preventDefault();
-                          const text = draftRef.current[index]?.text ?? block.text;
-                          const parsed = slashQuery(text);
-                          if (parsed?.command && !parsed.title) {
-                            const typePick = slashPick(parsed.command, objectCandidates);
-                            const blockPick = slashPick(parsed.command, blockCandidates);
-                            const item = BLOCK_SLASH.find((entry) => entry.id === blockPick?.id);
-                            if (item && !typePick) {
-                              applySlash(index, item.type, item.level);
+                          const current = draftRef.current[index];
+                          const text = current?.text ?? block.text;
+                          if (naming?.blockId === current?.id) {
+                            if (!text.trim()) {
+                              setNaming(null);
                               return;
                             }
+                            void finishObject(index, naming.typeId, text);
+                            return;
                           }
-                          if (onCommitSlashLine && slashTokens(text).length > 0) {
-                            void runSlashLine(index, text).then((handled) => {
-                              if (handled) return;
-                              if (isStandaloneUrl(text) && onCreateWeblink) {
-                                void turnIntoWeblink(index, text);
+                          if (text.startsWith('/') && onCreateObject) {
+                            const exact = parseCapture(text);
+                            if (exact) {
+                              if (exact.title) void finishObject(index, exact.typeId, exact.title);
+                              else beginNaming(index, exact.typeId);
+                              return;
+                            }
+                            const parsed = slashQuery(text);
+                            if (parsed && !parsed.title) {
+                              const choices = captureChoices(parsed.command);
+                              if (choices.length === 1) {
+                                beginNaming(index, choices[0].typeId);
                                 return;
                               }
-                              insertAfter(index, block);
-                            });
-                            return;
+                              if (choices.length > 1) return;
+                            }
+                          }
+                          if (!documentMode) {
+                            const parsed = slashQuery(text);
+                            if (parsed?.command && !parsed.title) {
+                              const blockPick = slashPick(parsed.command, blockCandidates);
+                              const item = BLOCK_SLASH.find((entry) => entry.id === blockPick?.id);
+                              if (item) {
+                                applySlash(index, item.type, item.level);
+                                return;
+                              }
+                            }
                           }
                           if (isStandaloneUrl(text) && onCreateWeblink) {
                             void turnIntoWeblink(index, text);
                             return;
                           }
+                          rememberUrls(text);
                           insertAfter(index, block);
                         }
                         if (event.key === 'Backspace' && block.text === '') {
+                          if (naming?.blockId === block.id) setNaming(null);
                           if (clampIndent(block.indent) > 0) {
                             event.preventDefault();
                             indentBy(index, -1);
@@ -503,12 +579,13 @@ export function BlockEditor({
                       }}
                       className={`block-input ${block.type === 'heading' ? 'font-[var(--font-title)] text-xl' : ''} ${block.checked ? 'text-[var(--muted)] line-through' : ''}`}
                     />
+                    </div>
                   )}
                 </div>
-                {!embedded && block.text.includes('[[') && (
+                {!documentMode && !embedded && block.text.includes('[[') && (
                   <div className="pb-1 pl-6 text-sm text-[var(--muted)]">{renderLinkedText(block.text, nodes, onOpen)}</div>
                 )}
-                {((block.tagIds ?? []).length > 0 || onEnsureTag) && (
+                {!documentMode && ((block.tagIds ?? []).length > 0 || onEnsureTag) && (
                   <div className="flex flex-wrap items-center gap-1 pb-1 pl-6">
                     {(block.tagIds ?? []).map((tagId) => {
                       const tag = nodes.find((node) => node.id === tagId);
@@ -576,58 +653,27 @@ export function BlockEditor({
                   </div>
                 )}
                 {slash === index && (() => {
-                  const token = activeSlashToken(block.text);
-                  if (!token) return null;
-                  const leading = token.start === 0;
-                  const typeHits = leading && onCommitSlashLine ? slashChoices(token.raw, objectCandidates) : [];
-                  const blockHits = leading && !slashQuery(block.text)?.title ? slashChoices(token.raw, blockCandidates) : [];
-                  const showMentions = typeHits.length === 0 && blockHits.length === 0;
-                  const mentionHits = showMentions ? matchObjects(token.raw, mentionCandidates).objects.slice(0, 8) : [];
-                  const mentionPlan = showMentions ? planMention(block.text, token, slashTypeRefs, mentionCandidates) : undefined;
-                  const createType = mentionPlan?.action === 'create' ? mentionPlan.typeId : undefined;
-                  if (typeHits.length === 0 && blockHits.length === 0 && mentionHits.length === 0 && !createType) return null;
+                  const parsed = slashQuery(block.text);
+                  if (!parsed || parsed.title) return null;
+                  const typeHits = captureChoices(parsed.command);
+                  const blockHits = documentMode ? [] : slashChoices(parsed.command, blockCandidates);
+                  if (typeHits.length === 0 && blockHits.length === 0) return null;
                   return (
-                    <div className="absolute z-20 mt-1 w-64 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--paper)] shadow-lg">
+                    <div className="absolute z-20 mt-1 w-64 overflow-hidden border border-[var(--border)] bg-[var(--paper)]">
                       {typeHits.map((item) => (
                         <button
-                          key={item.id}
+                          key={item.typeId}
                           type="button"
-                          className="block w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--surface-2)]"
+                          className="flex w-full items-baseline gap-3 px-3 py-1.5 text-left text-sm hover:bg-[var(--surface-2)]"
                           onMouseDown={(event) => {
                             event.preventDefault();
-                            void runSlashLine(index, block.text, item.id);
+                            beginNaming(index, item.typeId);
                           }}
                         >
-                          {t(`supertags.${item.id}`, item.names[0])}
+                          <span className="w-10 text-[var(--muted)]">/{item.code}</span>
+                          {t(`supertags.${item.typeId}`)}
                         </button>
                       ))}
-                      {mentionHits.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className="block w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--surface-2)]"
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            replaceToken(index, token, `[[${item.id}]]`);
-                          }}
-                        >
-                          {item.names[0] || item.id.slice(0, 8)}
-                        </button>
-                      ))}
-                      {createType && onEnsureSlashMention && (
-                        <button
-                          type="button"
-                          className="block w-full px-3 py-1.5 text-left text-sm text-[var(--muted)] hover:bg-[var(--surface-2)]"
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            void onEnsureSlashMention(token.raw, createType).then((id) => {
-                              if (id) replaceToken(index, token, `[[${id}]]`);
-                            });
-                          }}
-                        >
-                          {t('blocks.createNamed', { type: t(`supertags.${createType}`, createType), name: token.raw })}
-                        </button>
-                      )}
                       {blockHits.map((item) => {
                         const entry = BLOCK_SLASH.find((candidate) => candidate.id === item.id);
                         if (!entry) return null;

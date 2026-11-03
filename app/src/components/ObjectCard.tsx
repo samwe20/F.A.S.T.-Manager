@@ -19,6 +19,7 @@ interface ObjectCardProps {
   onOpen: (id: string) => void;
   onLinkView?: (view: LinkView) => void;
   onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+  quiet?: boolean;
 }
 
 export function ObjectCard({
@@ -31,6 +32,7 @@ export function ObjectCard({
   onOpen,
   onLinkView,
   onKeyDown,
+  quiet = false,
 }: ObjectCardProps) {
   const { t } = useTranslation();
   const paper = useInkPaper();
@@ -58,7 +60,7 @@ export function ObjectCard({
       data-embed={targetId}
       onKeyDown={onKeyDown}
     >
-      {onLinkView && (
+      {onLinkView && !quiet && (
         <div className="embed-view-switch">
           {LINK_VIEWS.map((view) => (
             <button

@@ -48,8 +48,8 @@ export function ObjectPage() {
   const getNodeBacklinks = useAppStore((s) => s.getNodeBacklinks);
   const ensureTag = useAppStore((s) => s.ensureTag);
   const createWeblink = useAppStore((s) => s.createWeblink);
-  const commitSlashLine = useAppStore((s) => s.commitSlashLine);
-  const ensureSlashMention = useAppStore((s) => s.ensureSlashMention);
+  const createObjectFromLine = useAppStore((s) => s.createObjectFromLine);
+  const createImage = useAppStore((s) => s.createImage);
   const attachMedia = useAppStore((s) => s.attachMedia);
   const setMediaProperty = useAppStore((s) => s.setMediaProperty);
   const paper = useInkPaper();
@@ -316,8 +316,9 @@ export function ObjectPage() {
         objectTypes={objectTypes}
         onEnsureTag={ensureTag}
         onCreateWeblink={createWeblink}
-        onCommitSlashLine={(text, forcedTypeId) => commitSlashLine(text, dayKey || undefined, forcedTypeId)}
-        onEnsureSlashMention={ensureSlashMention}
+        onCreateImage={createImage}
+        onCreateObject={(typeId, objectTitle) => createObjectFromLine(typeId, objectTitle, dayKey || undefined)}
+        documentMode={node.typeId === 'dailyNote'}
         onChange={(blocks) => void saveObjectBody(node.id, title, blocks)}
       />
 

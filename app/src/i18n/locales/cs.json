@@ -299,7 +299,7 @@
     "todo": "Úkol",
     "check": "Zaškrtnutí",
     "quote": "Citát",
-    "placeholder": "Pište větu. Enter nový blok, lomítko i uprostřed: /úkol pro /Frantu v projektu /Malostop",
+    "placeholder": "Pište text. Nový objekt: /o a Enter, pak jméno a Enter. /u úkol, /pro projekt, /s schůzka, /poz poznámka, /? otázka.",
     "createNamed": "Založit {{type}} {{name}}",
     "tag": "Štítek",
     "taggedIn": "V blocích",

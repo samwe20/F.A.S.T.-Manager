@@ -107,8 +107,34 @@ export async function ensureObjectModel(): Promise<void> {
   await migrateStoredMedia();
 }
 
-export async function createWeblinkObject(workspaceId: string, url: string): Promise<NodeRecord> {
+const weblinkInflight = new Map<string, Promise<NodeRecord>>();
+
+export async function createImageObject(workspaceId: string, src: string, title: string): Promise<NodeRecord> {
+  const trimmed = title.trim() || 'image';
+  return createNode({
+    workspaceId,
+    parentId: null,
+    content: trimmed,
+    title: trimmed,
+    typeId: 'image',
+    supertagIds: ['image'],
+    fieldValues: { image: { src } },
+  });
+}
+
+export function createWeblinkObject(workspaceId: string, url: string): Promise<NodeRecord> {
   const trimmed = url.trim();
+  const key = `${workspaceId}\n${trimmed}`;
+  const pending = weblinkInflight.get(key);
+  if (pending) return pending;
+  const job = createWeblinkObjectNow(workspaceId, trimmed).finally(() => {
+    weblinkInflight.delete(key);
+  });
+  weblinkInflight.set(key, job);
+  return job;
+}
+
+async function createWeblinkObjectNow(workspaceId: string, trimmed: string): Promise<NodeRecord> {
   const existing = (await getAllNodes(workspaceId)).find(
     (node) => node.typeId === 'weblink' && String(node.fieldValues.weblink?.url ?? '') === trimmed,
   );

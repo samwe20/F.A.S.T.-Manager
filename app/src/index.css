@@ -532,6 +532,19 @@ select:focus-visible,
   font-size: 14px;
 }
 
+.block-editor.is-document .block-input {
+  font-size: 17px;
+  line-height: 1.75;
+  padding: 0.05rem 0;
+}
+
+.capture-kind {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .block-input {
   width: 100%;
   border: 0;

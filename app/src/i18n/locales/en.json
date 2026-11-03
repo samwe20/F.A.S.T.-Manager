@@ -299,7 +299,7 @@
     "todo": "To-do",
     "check": "Checkbox",
     "quote": "Quote",
-    "placeholder": "Write a sentence. Enter starts a block, slash works mid-sentence: /task for /Franta in project /Malostop",
+    "placeholder": "Write. New object: /o then Enter, the name, Enter. /u task, /pro project, /s meeting, /poz note, /? question.",
     "createNamed": "Create {{type}} {{name}}",
     "tag": "Tag",
     "taggedIn": "In blocks",

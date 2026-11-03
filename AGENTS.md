@@ -77,16 +77,13 @@ createNode neslučuje výchozí vlastnosti, když dostane částečný fieldValu
 
 Editor bloků umí odstavec, nadpis, odrážku, zaškrtnutí a citát. Kód, matematika, tabulka, sloupce a přepínač tam nejsou a nepřidávej je, dokud o ně není požádáno.
 
-Lomítko může být na začátku bloku i uprostřed věty. Enter vezme celý řádek.
+Denní poznámka je textový editor. Píše se do ní věta jako do Capacities. Aplikace z věty nehádá typ, osobu ani projekt.
 
-/úkol koupit mléko založí úkol s názvem „koupit mléko“ a text bloku se změní na [[id]].
-/úkol bez zbytku založí úkol bez názvu.
-/úkol pro /Frantu je v tom, že v projektu /Malostop je mnoho nejasností založí úkol, osobu a projekt. Název a text úkolu je ta věta bez úvodního typu, se jmény tak, jak jsou napsaná. Na denní poznámce se z řádku stane karta [[id]] úkolu. Osoba se zapíše do vlastnosti assignee, projekt do project. Jméno se hledá i ve skloňování, takže /Frantu najde už existující objekt Franta. Nové jméno bez vodítka je osoba a uloží se tak, jak je napsané. Slovo mezi lomítky, které je název typu, určí typ: „v projektu /Malostop“ založí projekt.
-Shoda jde přes český název z i18n, anglický název a id typu. Diakritika se skládá.
-Když předpona sedí na víc typů, Enter nezaloží nic.
-Shoda na typ vyhraje nad shodou na druh bloku. Zaškrtávací blok se jmenuje „Zaškrtnutí“ / „Checkbox“, takže /úkol znamená typ úkol.
-Štítek, složka a denní poznámka se lomítkem nezaloží.
-Vznikne-li úkol z denní poznámky, dueDate je datum té poznámky.
+Objekt vznikne jen ze zkratky. /o a Enter znamená, že další řádek je jméno osoby. Honza Krulda a Enter osobu uloží a do textu vloží odkaz [[id]]. Stejně /u úkol, /pro projekt, /s schůzka, /poz poznámka a /? otázka. Zkratka a jméno na jednom řádku, třeba /o Honza Krulda a Enter, uloží objekt hned. /p samo o sobě nic nezaloží, protože sedí na projekt i poznámku. Celé slovo typu funguje stejně jako zkratka: /osoba, /úkol, /projekt, /schůzka, /poznámka, /otázka. Věta, která zkratkou nezačíná, zůstane obyčejný text, i když v ní jsou lomítka.
+
+Na denní poznámce nejsou úchyty pro přesun, odsazení ani štítek pod řádkem. Enter založí další odstavec. Úkol z denní poznámky dostane dueDate toho dne. Ostatní stránky mají stejné zkratky a navíc druhy bloků (odstavec, nadpis, odrážka, zaškrtnutí, citát).
+
+Obrázek vložený ze schránky nebo puštěný na text se sám uloží jako objekt typu obrázek a v textu se ukáže. Odkaz http nebo https se uloží jako objekt odkaz. Když je řádek jen ten odkaz, stane se z něj karta. Když je odkaz uvnitř věty, věta zůstane a objekt se uloží zvlášť.
 
 # není supertag. Pod blokem je tlačítko štítku. #vesmír založí nebo znovu použije objekt typu štítek a přidá jeho id do tagIds bloku. Klik na štítek otevře stránku se všemi použitími.
 
@@ -146,7 +143,8 @@ Nepřepisuj editor na contenteditable. Nepouštěj víc typů na jeden objekt. N
 - app/src/services/objectModel.ts — typy, migrace, odkazy vlastností, export
 - app/src/services/dataService.ts — Dexie, seed, sync apply
 - app/src/data/supertags.ts — vestavěné typy a fieldsForLineObject
-- app/src/utils/blocks.ts — lomítko, bloky, [[id]]
+- app/src/utils/blocks.ts — bloky a [[id]]
+- app/src/utils/capture.ts — zkratky /o /u /pro /s /poz /?
 - app/src/utils/nodeUtils.ts — náhledy, zpětné odkazy, úkoly dne
 - app/src/components/ObjectPage.tsx — stránka objektu a denní poznámka
 - app/src/components/BlockEditor.tsx — psaní, lomítko, #, @
@@ -156,4 +154,4 @@ Nepřepisuj editor na contenteditable. Nepouštěj víc typů na jeden objekt. N
 
 ## Ověření po importu
 
-Přečti app/src/components/ObjectPage.tsx, BlockEditor.tsx, app/src/store/appStore.ts a app/src/services/objectModel.ts. Ověř, že start otevře dnešní denní poznámku a že /úkol na jejím řádku založí úkol s termínem toho dne. Když starý návrh nesedí s tímto souborem, věř tomuto souboru a kódu.
+Přečti app/src/components/ObjectPage.tsx, BlockEditor.tsx, app/src/store/appStore.ts a app/src/services/objectModel.ts. Ověř, že start otevře dnešní denní poznámku a že /u a Enter, potom název a Enter, založí úkol s termínem toho dne. Věta bez zkratky zůstane text. Když starý návrh nesedí s tímto souborem, věř tomuto souboru a kódu.
