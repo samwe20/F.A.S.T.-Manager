@@ -99,7 +99,7 @@ Horní lišta má hledání s textem t('actions.search'), zpět, vpřed, paletu 
 
 Denní poznámka: když se název rovná datu, nadpis je dlouhé datum a nad ním rok v barvě typu. Pod ním jsou otevřené úkoly s dueDate toho dne a stavem jiným než done. Pod nimi jsou otevřené zaškrtávací bloky z jiných objektů, které k tomu dni patří (vznikly ten den, nebo nějaká vlastnost datem začíná). Klik vede na zdroj. Datum denní poznámky je ve vlastnostech skryté, protože je to nadpis. „Projito“ je textový přepínač v řádku pod nadpisem. Aliasy, kolekce, export, smazání, zpětné odkazy a zmínky jsou ve skládačce „Další“ / „More“.
 
-Pod úkoly jsou náhledy, nejvýš 12. Berou se objekty s názvem, obrázkem, odkazem nebo úryvkem. Denní poznámka, štítek, složka, smazané, aktuální poznámka a úkoly už vypsané nahoře se vynechají. Stejný den je první, pak updatedAt. Úryvek má nejvýš 4 řádky, holé [[id]] a řádek shodný s názvem se zahodí. Obrázek zabere dva sloupce.
+Pod nadpisem a úkoly dne je jen textové pole. Mřížka náhledů se na denní poznámce nekreslí. Štítek denní poznámky se v tom poli nepřidává.
 
 Kalendář je po otevření týden. Klik na den volá openDaily. Denní poznámky se v seznamu dat neopakují. ISO názvy se formátují jako dlouhé datum. Dnešek je černý čtverec s bílým textem.
 

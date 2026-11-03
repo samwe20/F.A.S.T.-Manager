@@ -532,6 +532,11 @@ select:focus-visible,
   font-size: 14px;
 }
 
+.block-editor.is-document {
+  min-height: calc(100dvh - 16rem);
+  margin-top: 1.5rem;
+}
+
 .block-editor.is-document .block-input {
   font-size: 17px;
   line-height: 1.75;

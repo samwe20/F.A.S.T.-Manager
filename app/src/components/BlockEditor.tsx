@@ -355,7 +355,17 @@ export function BlockEditor({
   };
 
   return (
-    <div className={`block-editor mt-6 ${documentMode ? 'is-document space-y-0' : 'space-y-1'}`}>
+    <div
+      className={`block-editor ${documentMode ? 'is-document space-y-0' : 'mt-6 space-y-1'}`}
+      onMouseDown={(event) => {
+        if (!documentMode) return;
+        const target = event.target as HTMLElement;
+        if (target.closest('textarea, button, a, input')) return;
+        const fields = event.currentTarget.querySelectorAll('textarea.block-input');
+        const last = fields.item(fields.length - 1);
+        if (last instanceof HTMLTextAreaElement) last.focus();
+      }}
+    >
       {draft.map((block, index) => {
         const embedTarget = embedIdFromText(block.text);
         const embedded = embedTarget !== null && isEmbedText(block.text);

@@ -10,7 +10,6 @@ import { labelInk } from '../utils/color';
 import { getIcon } from '../utils/icons';
 import { blocksWithTag, dayTodoBlocks, displayTitle, getReferenceCandidates, getUnlinkedMentions, objectTitle, resolveLinks } from '../utils/nodeUtils';
 import { BlockEditor } from './BlockEditor';
-import { DayPreviews } from './DayPreview';
 import { FieldEditor } from './FieldEditor';
 
 function sentence(value: string): string {
@@ -199,16 +198,7 @@ export function ObjectPage() {
         </ul>
       )}
 
-      {node.typeId === 'dailyNote' && (
-        <DayPreviews
-          nodes={nodes}
-          objectTypes={objectTypes}
-          dayKey={dayKey}
-          excludeIds={[node.id, ...dayTasks.map((task) => task.id)]}
-          onOpen={openObject}
-        />
-      )}
-
+      {node.typeId !== 'dailyNote' && (
       <div className="mt-4 flex flex-wrap items-center gap-1.5">
         {(node.tagIds ?? []).map((tagId) => {
           const tag = nodes.find((item) => item.id === tagId);
@@ -247,6 +237,7 @@ export function ObjectPage() {
           />
         </form>
       </div>
+      )}
 
       {node.typeId === 'weblink' && typeof fields.url === 'string' && fields.url && (
         <a
