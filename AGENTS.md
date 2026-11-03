@@ -99,9 +99,9 @@ Postranní panel: Kalendář, Dnes, potom typy kromě štítku, složky a denní
 
 Horní lišta má hledání s textem t('actions.search'), zpět, vpřed, paletu a tlačítko široké stránky. Není tam blesk ani tlačítko nového objektu. Široká stránka je settings.wideLayout a stejná volba je i v nastavení. Výchozí čtecí sloupec má 720 px, široký 72 rem.
 
-Denní poznámka: když se název rovná datu, nadpis je dlouhé datum a nad ním rok v barvě typu. Pod ním jsou otevřené úkoly s dueDate toho dne a stavem jiným než done. Pod nimi jsou otevřené zaškrtávací bloky z jiných objektů, které k tomu dni patří (vznikly ten den, nebo nějaká vlastnost datem začíná). Klik vede na zdroj. Datum denní poznámky je ve vlastnostech skryté, protože je to nadpis. „Projito“ je textový přepínač v řádku pod nadpisem. Aliasy, kolekce, export, smazání, zpětné odkazy a zmínky jsou ve skládačce „Další“ / „More“.
+Denní poznámka: když se název rovná datu, nadpis je dlouhé datum a nad ním rok v barvě typu. Pod nadpisem nejsou dlaždice úkolů s termínem toho dne. Úkol založený v textu zůstane v textu. Pod nadpisem jsou jen otevřené zaškrtávací bloky z jiných objektů, které k tomu dni patří (vznikly ten den, nebo nějaká vlastnost datem začíná). Klik vede na zdroj. Datum denní poznámky je ve vlastnostech skryté, protože je to nadpis. „Projito“ je textový přepínač v řádku pod nadpisem. Aliasy, kolekce, export, smazání, zpětné odkazy a zmínky jsou ve skládačce „Další“ / „More“.
 
-Pod nadpisem a úkoly dne je jen textové pole. Mřížka náhledů se na denní poznámce nekreslí. Štítek denní poznámky se v tom poli nepřidává.
+Pod nadpisem je jen textové pole. Mřížka náhledů se na denní poznámce nekreslí. Štítek denní poznámky se v tom poli nepřidává.
 
 Kalendář je po otevření týden. Klik na den volá openDaily. Pod číslem dne není počet objektů. Denní poznámky se v seznamu dat neopakují. ISO názvy se formátují jako dlouhé datum. Dnešek je černý čtverec s bílým textem.
 
