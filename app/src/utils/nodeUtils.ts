@@ -65,6 +65,20 @@ function fieldPointsAt(value: string | number | boolean, targetId: string): bool
   return splitIds(value).includes(targetId);
 }
 
+export function tasksAssignedTo(nodes: NodeRecord[], personId: string): NodeRecord[] {
+  return nodes.filter(
+    (node) => !node.deleted && node.typeId === 'task' && String(node.fieldValues.task?.assignee ?? '') === personId,
+  );
+}
+
+/** Empty status or assignee means that filter is off. Both set filters apply together. */
+export function matchesTypeFilters(node: NodeRecord, filters: { status?: string; assignee?: string }): boolean {
+  const bag = node.typeId ? (node.fieldValues[node.typeId] ?? {}) : {};
+  if (filters.status && String(bag.status ?? '') !== filters.status) return false;
+  if (filters.assignee && String(bag.assignee ?? '') !== filters.assignee) return false;
+  return true;
+}
+
 export function getBacklinks(nodes: NodeRecord[], targetId: string): NodeRecord[] {
   return nodes.filter((node) => {
     if (node.id === targetId) return false;

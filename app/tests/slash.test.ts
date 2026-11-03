@@ -32,7 +32,7 @@ describe('slash commands', () => {
     const task = BUILTIN_SUPERTAGS.find((type) => type.id === 'task');
     const note = BUILTIN_SUPERTAGS.find((type) => type.id === 'note');
     expect(task && fieldsForLineObject(task, '2026-11-02').dueDate).toBe('2026-11-02');
-    expect(task && fieldsForLineObject(task).status).toBe('new');
+    expect(task && fieldsForLineObject(task, '2026-11-02', { personId: 'petr' }).assignee).toBe('petr');
     expect(note && fieldsForLineObject(note, '2026-11-02').dueDate).toBeUndefined();
   });
 });

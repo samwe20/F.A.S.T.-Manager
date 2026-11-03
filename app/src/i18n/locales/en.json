@@ -236,6 +236,7 @@
     "aliasesHint": "Another name, then Enter",
     "backlinks": "Linked from",
     "mentions": "Unlinked mentions",
+    "tasksHere": "Tasks",
     "reviewed": "Reviewed",
     "download": "Download",
     "exportMd": "Export Markdown",
@@ -251,6 +252,7 @@
     "wide": "Wide",
     "kanban": "Board",
     "new": "New object",
+    "all": "All",
     "empty": "Nothing here yet.",
     "count": "{{count}} objects",
     "kanbanNeedsLabel": "Board view needs a select property."
@@ -300,6 +302,7 @@
     "check": "Checkbox",
     "quote": "Quote",
     "placeholder": "Write. New object: /o then Enter, the name, Enter. /u task, /pro project, /s meeting, /poz note, /? question.",
+    "placeholderPerson": "/u and a name saves a task for this person.",
     "createNamed": "Create {{type}} {{name}}",
     "tag": "Tag",
     "taggedIn": "In blocks",

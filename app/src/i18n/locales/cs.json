@@ -236,6 +236,7 @@
     "aliasesHint": "Další jméno a Enter",
     "backlinks": "Odkazuje sem",
     "mentions": "Zmínky bez odkazu",
+    "tasksHere": "Úkoly",
     "reviewed": "Projito",
     "download": "Stáhnout",
     "exportMd": "Export Markdown",
@@ -251,6 +252,7 @@
     "wide": "Široká",
     "kanban": "Sloupce",
     "new": "Nový objekt",
+    "all": "Vše",
     "empty": "Zatím tu nic není.",
     "count": "{{count}} objektů",
     "kanbanNeedsLabel": "Kanban potřebuje vlastnost typu výběr."
@@ -300,6 +302,7 @@
     "check": "Zaškrtnutí",
     "quote": "Citát",
     "placeholder": "Pište text. Nový objekt: /o a Enter, pak jméno a Enter. /u úkol, /pro projekt, /s schůzka, /poz poznámka, /? otázka.",
+    "placeholderPerson": "/u a název uloží úkol na tuto osobu.",
     "createNamed": "Založit {{type}} {{name}}",
     "tag": "Štítek",
     "taggedIn": "V blocích",

@@ -155,8 +155,15 @@ export function getDefaultFieldValues(tag: SupertagDef): Record<string, string |
   return values;
 }
 
-export function fieldsForLineObject(type: SupertagDef, dueDate?: string): Record<string, string | number | boolean> {
+export function fieldsForLineObject(
+  type: SupertagDef,
+  dueDate?: string,
+  links?: { personId?: string; projectId?: string },
+): Record<string, string | number | boolean> {
   const fields = { ...getDefaultFieldValues(type) };
   if (type.id === 'task' && dueDate) fields.dueDate = dueDate;
+  if (type.id === 'task' && links?.personId) fields.assignee = links.personId;
+  if (type.id === 'task' && links?.projectId) fields.project = links.projectId;
+  if (type.id === 'question' && links?.personId) fields.askedTo = links.personId;
   return fields;
 }

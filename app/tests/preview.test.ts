@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NodeRecord } from '../src/types';
-import { dayPreviewNodes, previewSnippet } from '../src/utils/nodeUtils';
+import { dayPreviewNodes, matchesTypeFilters, previewSnippet, tasksAssignedTo } from '../src/utils/nodeUtils';
 
 const link = '22222222-2222-2222-2222-222222222222';
 
@@ -89,5 +89,30 @@ describe('day previews', () => {
       }),
     );
     expect(dayPreviewNodes(notes, '2026-11-02', []).map((item) => item.id)).toHaveLength(12);
+  });
+});
+
+describe('type filters', () => {
+  const petr = node({ id: 't1', typeId: 'task', title: 'Zavolat', fieldValues: { task: { status: 'new', assignee: 'petr' } } });
+  const done = node({ id: 't2', typeId: 'task', title: 'Hotovo', fieldValues: { task: { status: 'done', assignee: 'jana' } } });
+
+  it('keeps every task when both filters are empty', () => {
+    expect([petr, done].filter((item) => matchesTypeFilters(item, {})).map((item) => item.id)).toEqual(['t1', 't2']);
+  });
+
+  it('keeps a task only when status and assignee both match', () => {
+    expect(matchesTypeFilters(petr, { status: 'new', assignee: 'petr' })).toBe(true);
+    expect(matchesTypeFilters(petr, { status: 'done', assignee: 'petr' })).toBe(false);
+    expect(matchesTypeFilters(done, { status: 'done' })).toBe(true);
+    expect(matchesTypeFilters(done, { assignee: 'petr' })).toBe(false);
+  });
+});
+
+describe('tasks on a person', () => {
+  it('keeps only tasks assigned to that person', () => {
+    const petr = node({ id: 'petr', typeId: 'person', title: 'Petr' });
+    const his = node({ id: 't1', typeId: 'task', title: 'Zavolat', fieldValues: { task: { assignee: 'petr' } } });
+    const other = node({ id: 't2', typeId: 'task', title: 'Jiný', fieldValues: { task: { assignee: 'jana' } } });
+    expect(tasksAssignedTo([petr, his, other], 'petr').map((item) => item.id)).toEqual(['t1']);
   });
 });

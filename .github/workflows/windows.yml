@@ -69,4 +69,6 @@ jobs:
             Od 1.0.2 se při startu neotevírá terminál. Od 1.0.3 je vzhled bílý, šedý a černý.
             Od 1.0.4 denní poznámka píše jako text. Objekt založí jen zkratka: /o osoba, /u úkol, /pro projekt, /s schůzka, /poz poznámka, /? otázka.
             Od 1.0.5 denní poznámka nemá mřížku náhledů. Pod nadpisem je textové pole.
+            Od 1.0.6 kalendář neukazuje počet pod dnem. Na stránce osoby jsou úkoly, které na ni patří.
+            Od 1.0.7 se na úkolech filtruje podle stavu a přiřazené osoby.
           files: app/src-tauri/target/release/bundle/nsis/*.exe
