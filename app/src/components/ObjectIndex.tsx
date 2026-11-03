@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/appStore';
 import type { DataView, NodeRecord } from '../types';
 import { localToday } from '../utils/dateUtils';
-import { displayTitle, resolveLinks } from '../utils/nodeUtils';
+import { displayTitle, matchesTypeFilters, resolveLinks } from '../utils/nodeUtils';
 import { getIcon } from '../utils/icons';
 import { QueryBuilder } from './QueryBuilder';
 
@@ -23,6 +23,13 @@ export function ObjectIndex() {
   const getQueryResults = useAppStore((s) => s.getQueryResults);
   const getSearchResults = useAppStore((s) => s.getSearchResults);
   const [builder, setBuilder] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
+
+  useEffect(() => {
+    setStatusFilter('');
+    setAssigneeFilter('');
+  }, [activeTypeId]);
 
   const type = objectTypes.find((item) => item.id === activeTypeId);
   const collection = collections.find((item) => item.id === activeCollectionId);
@@ -42,6 +49,16 @@ export function ObjectIndex() {
   }, [activeView, activeTypeId, collection, nodes, getQueryResults, getSearchResults, getVisibleNodes]);
 
   const showViews = activeView === 'type' || activeView === 'query' || activeView === 'collection';
+  const statusField = activeView === 'type' ? type?.fields.find((field) => field.key === 'status' && field.type === 'select') : undefined;
+  const assigneeField = activeView === 'type' ? type?.fields.find((field) => field.key === 'assignee' && field.type === 'reference') : undefined;
+  const people = useMemo(
+    () => nodes.filter((node) => !node.deleted && node.typeId === 'person'),
+    [nodes],
+  );
+  const shown = useMemo(
+    () => rows.filter((node) => matchesTypeFilters(node, { status: statusFilter, assignee: assigneeFilter })),
+    [rows, statusFilter, assigneeFilter],
+  );
   const selectField = type?.fields.find((field) => field.type === 'select');
   const view = showViews ? dataView : 'list';
 
@@ -66,7 +83,7 @@ export function ObjectIndex() {
                           ? collection?.name || t('nav.collections')
                           : t('nav.inbox')}
           </h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">{t('views.count', { count: rows.length })}</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">{t('views.count', { count: shown.length })}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {showViews &&
@@ -92,17 +109,48 @@ export function ObjectIndex() {
         </div>
       </div>
 
+      {(statusField || assigneeField) && (
+        <div className="mb-6 flex flex-wrap gap-6 text-sm">
+          {statusField && (
+            <label className="flex items-center gap-2 text-[var(--muted)]">
+              {t('fields.status')}
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="bg-transparent text-[var(--text)] outline-none">
+                <option value="">{t('views.all')}</option>
+                {(statusField.options ?? []).map((option) => (
+                  <option key={option} value={option}>
+                    {t(`status.${option}`, option)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {assigneeField && (
+            <label className="flex items-center gap-2 text-[var(--muted)]">
+              {t('fields.assignee')}
+              <select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)} className="bg-transparent text-[var(--text)] outline-none">
+                <option value="">{t('views.all')}</option>
+                {people.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {displayTitle(nodes, person) || t('object.untitled')}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+
       {queries.length === 0 && activeView === 'query' && (
         <p className="text-sm text-[var(--muted)]">{t('views.empty')}</p>
       )}
 
-      {view === 'table' && <TableView rows={rows} typeId={type?.id} onOpen={openObject} />}
-      {view === 'cards' && <CardView rows={rows} onOpen={openObject} />}
+      {view === 'table' && <TableView rows={shown} typeId={type?.id} onOpen={openObject} />}
+      {view === 'cards' && <CardView rows={shown} onOpen={openObject} />}
       {view === 'kanban' && (
-        <KanbanView rows={rows} typeId={type?.id} fieldKey={selectField?.key} options={selectField?.options ?? []} onOpen={openObject} />
+        <KanbanView rows={shown} typeId={type?.id} fieldKey={selectField?.key} options={selectField?.options ?? []} onOpen={openObject} />
       )}
-      {view === 'list' && <ListView rows={rows} today={localToday()} onOpen={openObject} />}
-      {rows.length === 0 && <p className="mt-8 text-sm text-[var(--muted)]">{t('views.empty')}</p>}
+      {view === 'list' && <ListView rows={shown} today={localToday()} onOpen={openObject} />}
+      {shown.length === 0 && <p className="mt-8 text-sm text-[var(--muted)]">{t('views.empty')}</p>}
       {builder && <QueryBuilder onClose={() => setBuilder(false)} />}
     </div>
   );
@@ -127,6 +175,11 @@ function ListView({ rows, onOpen, today }: { rows: NodeRecord[]; onOpen: (id: st
               <span className="block truncate text-base">{displayTitle(nodes, node) || t('object.untitled')}</span>
               {openTodo && <span className="block truncate text-xs text-[var(--muted)]">☐ {resolveLinks(openTodo.text, nodes)}</span>}
             </span>
+            {typeof node.fieldValues[node.typeId ?? '']?.assignee === 'string' && (
+              <span className="shrink-0 text-xs text-[var(--muted)]">
+                {displayTitle(nodes, nodes.find((item) => item.id === node.fieldValues[node.typeId ?? '']?.assignee)) || ''}
+              </span>
+            )}
             {typeof due === 'string' && due && (
               <span className={`text-xs ${due < today ? 'text-red-700' : 'text-[var(--muted)]'}`}>{due}</span>
             )}

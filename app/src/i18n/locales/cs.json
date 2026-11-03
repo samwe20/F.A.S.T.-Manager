@@ -252,6 +252,7 @@
     "wide": "Široká",
     "kanban": "Sloupce",
     "new": "Nový objekt",
+    "all": "Vše",
     "empty": "Zatím tu nic není.",
     "count": "{{count}} objektů",
     "kanbanNeedsLabel": "Kanban potřebuje vlastnost typu výběr."

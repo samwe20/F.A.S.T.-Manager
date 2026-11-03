@@ -71,6 +71,14 @@ export function tasksAssignedTo(nodes: NodeRecord[], personId: string): NodeReco
   );
 }
 
+/** Empty status or assignee means that filter is off. Both set filters apply together. */
+export function matchesTypeFilters(node: NodeRecord, filters: { status?: string; assignee?: string }): boolean {
+  const bag = node.typeId ? (node.fieldValues[node.typeId] ?? {}) : {};
+  if (filters.status && String(bag.status ?? '') !== filters.status) return false;
+  if (filters.assignee && String(bag.assignee ?? '') !== filters.assignee) return false;
+  return true;
+}
+
 export function getBacklinks(nodes: NodeRecord[], targetId: string): NodeRecord[] {
   return nodes.filter((node) => {
     if (node.id === targetId) return false;

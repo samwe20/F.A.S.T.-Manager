@@ -252,6 +252,7 @@
     "wide": "Wide",
     "kanban": "Board",
     "new": "New object",
+    "all": "All",
     "empty": "Nothing here yet.",
     "count": "{{count}} objects",
     "kanbanNeedsLabel": "Board view needs a select property."

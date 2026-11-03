@@ -111,7 +111,7 @@ Nastavení: vzhled, jazyk, široká stránka, sync, vault. „Typy a šablony“
 
 Zpět z objektu otevřeného z denní poznámky je jen o jednu úroveň (returnNodeId), potom na kalendář. Inbox, dnešek a plánované při návratu otevřou dnešek. Vyprázdnění hledání na pohledu hledání otevře dnešek.
 
-Pohledy typu, kolekce a dotazu: seznam, tabulka, karty, kanban. Kanban potřebuje vlastnost typu výběr. Semínkové dotazy jsou Moje úkoly, Otevřené otázky a Po termínu.
+Pohledy typu, kolekce a dotazu: seznam, tabulka, karty, kanban. Kanban potřebuje vlastnost typu výběr. Semínkové dotazy jsou Moje úkoly, Otevřené otázky a Po termínu. Na pohledu úkolů jsou filtry Stav a Přiřazeno. Prázdná volba znamená všechno a oba filtry platí zároveň. V seznamu je u úkolu vidět jméno přiřazené osoby.
 
 ## Vzhled
 
