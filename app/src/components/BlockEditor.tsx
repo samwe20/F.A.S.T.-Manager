@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, 
 import { useTranslation } from 'react-i18next';
 import type { Block, BlockType, NodeRecord, ObjectTypeRecord } from '../types';
 import { adjustIndent, clampIndent, embedIdFromText, emptyBlock, isEmbedText, moveBlock, slashPick, slashQuery, slashChoices } from '../utils/blocks';
-import { captureChoices, parseCapture } from '../utils/capture';
+import { captureChoices, lineCaptures, openShortcut, type LinePiece } from '../utils/capture';
 import { getIcon } from '../utils/icons';
 import { objectTitle } from '../utils/nodeUtils';
 import { isStandaloneUrl, urlsInText } from '../utils/weblink';
@@ -127,7 +127,7 @@ export function BlockEditor({
     draftRef.current = next;
     setDraft(next);
     const namingHere = naming?.blockId === draftRef.current[index]?.id;
-    if (!namingHere && text.startsWith('/') && !text.slice(1).includes(' ') && !parseCapture(text)?.title) setSlash(index);
+    if (!namingHere && openShortcut(text)) setSlash(index);
     else if (slash === index) setSlash(null);
     const mention = text.match(/(?:@|\[\[)([^\]\n]*)$/);
     if (mention) setLinkAt({ index, query: mention[1] ?? '' });
@@ -152,13 +152,82 @@ export function BlockEditor({
     commit(draftRef.current.map((block, i) => (i === index ? { ...block, text } : block)));
   };
 
-  const beginNaming = (index: number, typeId: string) => {
+  const startNaming = (index: number, typeId: string, prefix = '') => {
     const current = draftRef.current[index];
     if (!current) return;
     setSlash(null);
-    setNaming({ blockId: current.id, typeId });
-    focusId.current = current.id;
-    commit(draftRef.current.map((block, i) => (i === index ? { ...block, text: '' } : block)));
+    const kept = prefix.trim();
+    if (!kept) {
+      setNaming({ blockId: current.id, typeId });
+      focusId.current = current.id;
+      commit(draftRef.current.map((block, i) => (i === index ? { ...block, text: '' } : block)));
+      return;
+    }
+    const blank = emptyBlock('paragraph');
+    blank.indent = clampIndent(current.indent);
+    const next = [...draftRef.current];
+    next[index] = { ...current, text: kept };
+    next.splice(index + 1, 0, blank);
+    setNaming({ blockId: blank.id, typeId });
+    focusId.current = blank.id;
+    commit(next);
+  };
+
+  const applyCaptures = async (index: number, text: string) => {
+    if (!onCreateObject) return false;
+    const pieces = lineCaptures(text);
+    if (!pieces) return false;
+    const creates = pieces.filter((piece) => piece.kind === 'create');
+    const names = pieces.filter((piece) => piece.kind === 'name');
+    if (creates.length === 0) {
+      if (names.length !== 1) return false;
+      const nameAt = pieces.findIndex((piece) => piece.kind === 'name');
+      const name = pieces[nameAt];
+      if (name?.kind !== 'name') return false;
+      const prefix = pieces
+        .slice(0, nameAt)
+        .filter((piece): piece is Extract<LinePiece, { kind: 'text' }> => piece.kind === 'text')
+        .map((piece) => piece.text)
+        .join(' ');
+      startNaming(index, name.typeId, prefix);
+      return true;
+    }
+    const current = draftRef.current[index];
+    if (!current) return false;
+    pendingRef.current = true;
+    try {
+      const built: Block[] = [];
+      let lastId = '';
+      for (const piece of pieces) {
+        if (piece.kind === 'text' && piece.text.trim()) {
+          built.push({ ...emptyBlock(), indent: clampIndent(current.indent), text: piece.text.trim() });
+        } else if (piece.kind === 'create') {
+          const id = await onCreateObject(piece.typeId, piece.title);
+          if (!id) continue;
+          lastId = id;
+          built.push({ ...emptyBlock(), indent: clampIndent(current.indent), text: `[[${id}]]`, linkView: 'glyph' });
+        }
+      }
+      if (!lastId) {
+        pendingRef.current = false;
+        return false;
+      }
+      const blank = emptyBlock('paragraph');
+      blank.indent = clampIndent(current.indent);
+      built.push(blank);
+      const trailing = pieces[pieces.length - 1];
+      const next = [...draftRef.current];
+      next.splice(index, 1, ...built);
+      focusId.current = blank.id;
+      setNaming(trailing?.kind === 'name' ? { blockId: blank.id, typeId: trailing.typeId } : null);
+      setSlash(null);
+      pendingText.current = `[[${lastId}]]`;
+      commit(next);
+      return true;
+    } catch (error) {
+      pendingRef.current = false;
+      throw error;
+    }
   };
 
   const finishObject = async (index: number, typeId: string, title: string) => {
@@ -541,21 +610,21 @@ export function BlockEditor({
                             void finishObject(index, naming.typeId, text);
                             return;
                           }
-                          if (text.startsWith('/') && onCreateObject) {
-                            const exact = parseCapture(text);
-                            if (exact) {
-                              if (exact.title) void finishObject(index, exact.typeId, exact.title);
-                              else beginNaming(index, exact.typeId);
+                          if (onCreateObject && (lineCaptures(text) || openShortcut(text))) {
+                            const pieces = lineCaptures(text);
+                            if (pieces) {
+                              void applyCaptures(index, text);
                               return;
                             }
-                            const parsed = slashQuery(text);
-                            if (parsed && !parsed.title) {
-                              const choices = captureChoices(parsed.command);
+                            const opened = openShortcut(text);
+                            if (opened) {
+                              const choices = captureChoices(opened.command);
                               if (choices.length === 1) {
-                                beginNaming(index, choices[0].typeId);
+                                const slashAt = text.lastIndexOf('/');
+                                startNaming(index, choices[0].typeId, slashAt > 0 ? text.slice(0, slashAt) : '');
                                 return;
                               }
-                              if (choices.length > 1) return;
+                              if (choices.length > 1 || opened.command === '') return;
                             }
                           }
                           if (!documentMode) {
@@ -665,10 +734,10 @@ export function BlockEditor({
                   </div>
                 )}
                 {slash === index && (() => {
-                  const parsed = slashQuery(block.text);
-                  if (!parsed || parsed.title) return null;
-                  const typeHits = captureChoices(parsed.command);
-                  const blockHits = documentMode ? [] : slashChoices(parsed.command, blockCandidates);
+                  const opened = openShortcut(block.text);
+                  if (!opened) return null;
+                  const typeHits = captureChoices(opened.command);
+                  const blockHits = documentMode || !block.text.startsWith('/') ? [] : slashChoices(opened.command, blockCandidates);
                   if (typeHits.length === 0 && blockHits.length === 0) return null;
                   return (
                     <div className="absolute z-20 mt-1 w-64 overflow-hidden border border-[var(--border)] bg-[var(--paper)]">
@@ -679,7 +748,8 @@ export function BlockEditor({
                           className="flex w-full items-baseline gap-3 px-3 py-1.5 text-left text-sm hover:bg-[var(--surface-2)]"
                           onMouseDown={(event) => {
                             event.preventDefault();
-                            beginNaming(index, item.typeId);
+                            const slashAt = block.text.lastIndexOf('/');
+                            startNaming(index, item.typeId, slashAt > 0 ? block.text.slice(0, slashAt) : '');
                           }}
                         >
                           <span className="w-10 text-[var(--muted)]">/{item.code}</span>

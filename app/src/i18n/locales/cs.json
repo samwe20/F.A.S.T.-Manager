@@ -301,7 +301,7 @@
     "todo": "Úkol",
     "check": "Zaškrtnutí",
     "quote": "Citát",
-    "placeholder": "Pište text. Nový objekt: /o a Enter, pak jméno a Enter. /u úkol, /pro projekt, /s schůzka, /poz poznámka, /? otázka.",
+    "placeholder": "Pište text. Zkratka funguje i uprostřed věty a několik najednou: /o Petr /u Zavolat. /u úkol, /pro projekt, /s schůzka, /poz poznámka, /? otázka.",
     "placeholderPerson": "/u a název uloží úkol na tuto osobu.",
     "createNamed": "Založit {{type}} {{name}}",
     "tag": "Štítek",

@@ -301,7 +301,7 @@
     "todo": "To-do",
     "check": "Checkbox",
     "quote": "Quote",
-    "placeholder": "Write. New object: /o then Enter, the name, Enter. /u task, /pro project, /s meeting, /poz note, /? question.",
+    "placeholder": "Write. A shortcut works mid-sentence, and several at once: /o Petr /u Call. /u task, /pro project, /s meeting, /poz note, /? question.",
     "placeholderPerson": "/u and a name saves a task for this person.",
     "createNamed": "Create {{type}} {{name}}",
     "tag": "Tag",

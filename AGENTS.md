@@ -79,7 +79,7 @@ Editor bloků umí odstavec, nadpis, odrážku, zaškrtnutí a citát. Kód, mat
 
 Denní poznámka je textový editor. Píše se do ní věta jako do Capacities. Aplikace z věty nehádá typ, osobu ani projekt.
 
-Objekt vznikne jen ze zkratky. /o a Enter znamená, že další řádek je jméno osoby. Honza Krulda a Enter osobu uloží a do textu vloží odkaz [[id]]. Stejně /u úkol, /pro projekt, /s schůzka, /poz poznámka a /? otázka. Zkratka a jméno na jednom řádku, třeba /o Honza Krulda a Enter, uloží objekt hned. /p samo o sobě nic nezaloží, protože sedí na projekt i poznámku. Celé slovo typu funguje stejně jako zkratka: /osoba, /úkol, /projekt, /schůzka, /poznámka, /otázka. Věta, která zkratkou nezačíná, zůstane obyčejný text, i když v ní jsou lomítka.
+Objekt vznikne jen ze zkratky. /o a Enter znamená, že další řádek je jméno osoby. Honza Krulda a Enter osobu uloží a do textu vloží odkaz [[id]]. Stejně /u úkol, /pro projekt, /s schůzka, /poz poznámka a /? otázka. Zkratka a jméno na jednom řádku, třeba /o Honza Krulda a Enter, uloží objekt hned. Zkratka funguje i uprostřed věty a několik jich může být na jednom řádku. Enter založí každý takový objekt. Jméno je text za zkratkou až do další zkratky. Text před první zkratkou zůstane text. /p samo o sobě nic nezaloží, protože sedí na projekt i poznámku. Celé slovo typu funguje stejně jako zkratka: /osoba, /úkol, /projekt, /schůzka, /poznámka, /otázka. Lomítko, které není zkratka, zůstane text. Aplikace z věty pořád nehádá typ.
 
 Na stránce osoby jsou vypsané úkoly, které mají v Přiřazeno tuto osobu. /u napsané na té stránce takový úkol založí. Na stránce projektu /u zapíše úkol do vlastnosti Projekt.
 

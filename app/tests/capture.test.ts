@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captureChoices, parseCapture } from '../src/utils/capture';
+import { captureChoices, lineCaptures, parseCapture } from '../src/utils/capture';
 
 const sentence =
   '/úkol pro /Frantu je v tom, že v projektu /Malostop je mnoho nejasností ohledně akvizice a má je vyjasnit.';
@@ -26,6 +26,31 @@ describe('capture shortcuts', () => {
     expect(parseCapture('Zítra zavolat /Frantu.')).toBeNull();
     expect(parseCapture('/p')).toBeNull();
     expect(parseCapture('/složka Archiv')).toBeNull();
+  });
+
+  it('reads several shortcuts in one sentence', () => {
+    expect(lineCaptures('Zítra /o Petr /u Zavolat')).toEqual([
+      { kind: 'text', text: 'Zítra' },
+      { kind: 'create', typeId: 'person', title: 'Petr' },
+      { kind: 'create', typeId: 'task', title: 'Zavolat' },
+    ]);
+    expect(lineCaptures('/pro Web /s pondělí /? kolik')).toEqual([
+      { kind: 'create', typeId: 'project', title: 'Web' },
+      { kind: 'create', typeId: 'meeting', title: 'pondělí' },
+      { kind: 'create', typeId: 'question', title: 'kolik' },
+    ]);
+  });
+
+  it('keeps a bare shortcut in the middle ready for a name, and ignores a slash that is not a shortcut', () => {
+    expect(lineCaptures('Volám /o')).toEqual([
+      { kind: 'text', text: 'Volám' },
+      { kind: 'name', typeId: 'person' },
+    ]);
+    expect(lineCaptures('Zítra zavolat /Frantu.')).toBeNull();
+    expect(lineCaptures(sentence)?.find((piece) => piece.kind === 'create')).toMatchObject({
+      typeId: 'task',
+      title: expect.stringContaining('/Frantu'),
+    });
   });
 
   it('keeps an unfinished prefix open until it is unique', () => {
