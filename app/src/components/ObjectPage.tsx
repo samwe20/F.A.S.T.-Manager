@@ -73,16 +73,6 @@ export function ObjectPage() {
 
   const title = node.title ?? objectTitle(node);
   const dayKey = node.typeId === 'dailyNote' ? String(node.fieldValues.dailyNote?.date ?? '') : '';
-  const dayTasks =
-    node.typeId === 'dailyNote'
-      ? nodes.filter(
-          (item) =>
-            item.typeId === 'task' &&
-            !item.deleted &&
-            String(item.fieldValues.task?.dueDate ?? '') === dayKey &&
-            item.fieldValues.task?.status !== 'done',
-        )
-      : [];
   const dayChecks = node.typeId === 'dailyNote' && dayKey ? dayTodoBlocks(nodes, dayKey, [node.id]) : [];
   const personTasks = node.typeId === 'person' ? tasksAssignedTo(nodes, node.id) : [];
   const backlinks = getNodeBacklinks(node.id);
@@ -178,16 +168,8 @@ export function ObjectPage() {
         )}
       </div>
 
-      {node.typeId === 'dailyNote' && (dayTasks.length > 0 || dayChecks.length > 0) && (
+      {node.typeId === 'dailyNote' && dayChecks.length > 0 && (
         <ul className="day-tasks">
-          {dayTasks.map((task) => (
-            <li key={task.id}>
-              <button type="button" className="day-task" onClick={() => openObject(task.id)}>
-                <i style={{ background: objectTypes.find((item) => item.id === task.typeId)?.color }} />
-                {displayTitle(nodes, task) || t('object.untitled')}
-              </button>
-            </li>
-          ))}
           {dayChecks.map((hit) => (
             <li key={hit.blockId}>
               <button type="button" className="day-task" onClick={() => openObject(hit.nodeId)}>
