@@ -605,6 +605,28 @@ select:focus-visible,
   font-size: 14px;
 }
 
+.doc-menu button.is-active,
+.name-suggest button.is-active {
+  background: var(--accent-soft);
+}
+
+.name-suggest {
+  position: absolute;
+  z-index: 30;
+  min-width: 12rem;
+  margin-top: 0.15rem;
+  border: 1px solid var(--border);
+  background: var(--paper);
+}
+
+.name-suggest button {
+  display: block;
+  width: 100%;
+  padding: 0.35rem 0.7rem;
+  text-align: left;
+  font-size: 14px;
+}
+
 .doc-menu button span {
   width: 2.6rem;
   color: var(--muted);

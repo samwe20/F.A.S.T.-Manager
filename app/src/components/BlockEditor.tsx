@@ -4,7 +4,7 @@ import type { Block, BlockType, NodeRecord, ObjectTypeRecord } from '../types';
 import { adjustIndent, clampIndent, embedIdFromText, emptyBlock, isEmbedText, moveBlock, slashPick, slashQuery, slashChoices } from '../utils/blocks';
 import { captureChoices, lineCaptures, openShortcut, type LinePiece } from '../utils/capture';
 import { getIcon } from '../utils/icons';
-import { objectTitle } from '../utils/nodeUtils';
+import { nameSuggestions, objectTitle } from '../utils/nodeUtils';
 import { isStandaloneUrl, urlsInText } from '../utils/weblink';
 import { DocumentEditor } from './DocumentEditor';
 import { ObjectCard } from './ObjectCard';
@@ -50,6 +50,7 @@ export function BlockEditor({
   const [draft, setDraft] = useState(blocks);
   const [slash, setSlash] = useState<number | null>(null);
   const [naming, setNaming] = useState<{ blockId: string; typeId: string } | null>(null);
+  const [suggestAt, setSuggestAt] = useState(0);
   const [linkAt, setLinkAt] = useState<{ index: number; query: string } | null>(null);
   const [tagAt, setTagAt] = useState<number | null>(null);
   const [tagQuery, setTagQuery] = useState('');
@@ -251,12 +252,27 @@ export function BlockEditor({
       focusId.current = created.id;
       setNaming(null);
       setSlash(null);
+      setSuggestAt(0);
       commit(next);
       return true;
     } catch (error) {
       pendingRef.current = false;
       throw error;
     }
+  };
+
+  const placeExisting = (index: number, id: string) => {
+    const current = draftRef.current[index];
+    if (!current) return;
+    const created = emptyBlock('paragraph');
+    created.indent = clampIndent(current.indent);
+    const next = [...draftRef.current];
+    next[index] = { ...current, text: `[[${id}]]`, linkView: 'glyph' };
+    next.splice(index + 1, 0, created);
+    focusId.current = created.id;
+    setNaming(null);
+    setSuggestAt(0);
+    commit(next);
   };
 
   const rememberUrls = (text: string) => {
@@ -559,7 +575,7 @@ export function BlockEditor({
                       )}
                     </div>
                   ) : (
-                    <div className="min-w-0 flex-1">
+                    <div className="relative min-w-0 flex-1">
                     {naming?.blockId === block.id && (
                       <div className="capture-kind">{t(`supertags.${naming.typeId}`)}</div>
                     )}
@@ -574,7 +590,10 @@ export function BlockEditor({
                             ? (placeholder || t('blocks.placeholder'))
                             : ''
                       }
-                      onChange={(event) => updateText(index, event.target.value)}
+                      onChange={(event) => {
+                        if (naming?.blockId === block.id) setSuggestAt(0);
+                        updateText(index, event.target.value);
+                      }}
                       onPaste={(event) => {
                         const images = imageFilesFrom(event.clipboardData);
                         if (images.length && onCreateImage) {
@@ -610,9 +629,18 @@ export function BlockEditor({
                           if (naming?.blockId === block.id) {
                             event.preventDefault();
                             setNaming(null);
+                            setSuggestAt(0);
                             return;
                           }
                           if (slash === index) setSlash(null);
+                        }
+                        if (naming?.blockId === block.id && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+                          const hits = nameSuggestions(nodes, naming.typeId, block.text);
+                          if (hits.length) {
+                            event.preventDefault();
+                            setSuggestAt((current) => (current + (event.key === 'ArrowDown' ? 1 : hits.length - 1)) % hits.length);
+                            return;
+                          }
                         }
                         if (onStructuralKey(event, index, block, 'input')) return;
                         if (event.key === 'Enter' && !event.shiftKey) {
@@ -622,6 +650,11 @@ export function BlockEditor({
                           if (naming?.blockId === current?.id) {
                             if (!text.trim()) {
                               setNaming(null);
+                              return;
+                            }
+                            const hits = nameSuggestions(nodes, naming.typeId, text);
+                            if (hits.length) {
+                              placeExisting(index, hits[Math.min(suggestAt, hits.length - 1)].id);
                               return;
                             }
                             void finishObject(index, naming.typeId, text);
@@ -677,6 +710,27 @@ export function BlockEditor({
                       }}
                       className={`block-input ${block.type === 'heading' ? 'font-[var(--font-title)] text-xl' : ''} ${block.checked ? 'text-[var(--muted)] line-through' : ''}`}
                     />
+                    {naming?.blockId === block.id && (() => {
+                      const hits = nameSuggestions(nodes, naming.typeId, block.text);
+                      if (!hits.length) return null;
+                      return (
+                        <div className="name-suggest">
+                          {hits.map((item, hitIndex) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className={hitIndex === Math.min(suggestAt, hits.length - 1) ? 'is-active' : ''}
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                placeExisting(index, item.id);
+                              }}
+                            >
+                              {objectTitle(item)}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     </div>
                   )}
                 </div>

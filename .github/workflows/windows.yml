@@ -76,4 +76,5 @@ jobs:
             Od 1.0.9 zkratka funguje i uprostřed věty a několik zkratek na jednom řádku.
             Od 1.0.10 je denní poznámka souvislý text. Jméno po zkratce zůstane ve větě jako odkaz.
             Od 1.0.11 přiřazení nabízí jen osoby, stejné jméno znovu použije stávající objekt a vložený obrázek se v poznámce ukáže.
+            Od 1.0.12 se při psaní jména nabídne existující objekt, třeba Au a Aurora.
           files: app/src-tauri/target/release/bundle/nsis/*.exe

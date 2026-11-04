@@ -187,6 +187,34 @@ export function sameObjectName(a: string, b: string): boolean {
   return left.length > 0 && left === right;
 }
 
+function foldName(value: string): string {
+  return canonicalName(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('cs');
+}
+
+export function nameSuggestions(nodes: NodeRecord[], typeId: string, query: string, limit = 8): NodeRecord[] {
+  const needle = foldName(query);
+  if (!needle || !typeId) return [];
+  const hits = nodes.filter((node) => {
+    if (node.deleted || node.typeId !== typeId) return false;
+    const names = [objectTitle(node), ...(node.aliases ?? [])];
+    return names.some((name) => {
+      const folded = foldName(name);
+      if (!folded) return false;
+      if (folded.startsWith(needle)) return true;
+      return folded.split(/\s+/).some((word) => word.startsWith(needle));
+    });
+  });
+  hits.sort((a, b) => {
+    const aStarts = foldName(objectTitle(a)).startsWith(needle) ? 0 : 1;
+    const bStarts = foldName(objectTitle(b)).startsWith(needle) ? 0 : 1;
+    return aStarts - bStarts || objectTitle(a).localeCompare(objectTitle(b), 'cs');
+  });
+  return hits.slice(0, limit);
+}
+
 export function getReferenceCandidates(
   nodes: NodeRecord[],
   referenceSupertag?: string,

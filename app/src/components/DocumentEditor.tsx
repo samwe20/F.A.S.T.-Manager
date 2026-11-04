@@ -5,7 +5,7 @@ import { readMedia, mediaObjectUrl } from '../services/mediaStore';
 import { emptyBlock, newBlockId } from '../utils/blocks';
 import { CAPTURE_SHORTCUTS, captureChoices, lineCaptures, openShortcut, type LinePiece } from '../utils/capture';
 import { isDataUrl, parseBlobRef } from '../utils/media';
-import { canonicalName, displayTitle } from '../utils/nodeUtils';
+import { canonicalName, displayTitle, nameSuggestions, objectTitle } from '../utils/nodeUtils';
 import { isStandaloneUrl, urlsInText } from '../utils/weblink';
 
 interface DocumentEditorProps {
@@ -37,6 +37,9 @@ export function DocumentEditor({
   const typesRef = useRef(objectTypes);
   const saveTimer = useRef<number | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; command: string } | null>(null);
+  const [suggest, setSuggest] = useState<{ x: number; y: number; query: string; active: number } | null>(null);
+  const suggestRef = useRef(suggest);
+  suggestRef.current = suggest;
   nodesRef.current = nodes;
   typesRef.current = objectTypes;
 
@@ -175,12 +178,36 @@ export function DocumentEditor({
     return range.toString().replace(/\u00a0/g, ' ');
   };
 
-  const refreshMenu = () => {
-    const paragraph = currentParagraph();
-    if (!paragraph || paragraph.querySelector('.capture-name') && caretInside(paragraph.querySelector('.capture-name'))) {
-      setMenu(null);
+  const namingQuery = (naming: HTMLElement) =>
+    (naming.textContent ?? '').replace(/\u200b/g, '').replace(/\u00a0/g, ' ').trim();
+
+  const refreshSuggest = (naming: HTMLElement) => {
+    const query = namingQuery(naming);
+    const typeId = naming.dataset.type ?? '';
+    const hits = nameSuggestions(nodesRef.current, typeId, query);
+    if (!hits.length) {
+      setSuggest(null);
       return;
     }
+    const rect = naming.getBoundingClientRect();
+    setSuggest((current) => ({
+      x: rect.left,
+      y: rect.bottom + 4,
+      query,
+      active: current && current.query === query ? Math.min(current.active, hits.length - 1) : 0,
+    }));
+  };
+
+  const refreshMenu = () => {
+    const paragraph = currentParagraph();
+    const naming = paragraph?.querySelector('.capture-name');
+    if (!paragraph || (naming && caretInside(naming))) {
+      setMenu(null);
+      if (naming instanceof HTMLElement && caretInside(naming)) refreshSuggest(naming);
+      else setSuggest(null);
+      return;
+    }
+    setSuggest(null);
     const opened = openShortcut(textBeforeCaret());
     if (!opened) {
       setMenu(null);
@@ -352,6 +379,7 @@ export function DocumentEditor({
     rootRef.current?.focus();
     place(space, 1);
     setMenu(null);
+    setSuggest(null);
     const id = await onCreateObject(typeId, title);
     if (!id) {
       chip.replaceWith(document.createTextNode(title));
@@ -361,6 +389,18 @@ export function DocumentEditor({
     chip.dataset.id = id;
     const label = labelFor(id);
     if (label && !label.startsWith(id.slice(0, 8))) chip.textContent = label;
+    persist();
+  };
+
+  const acceptSuggestion = (span: HTMLElement, id: string) => {
+    const node = nodesRef.current.find((item) => item.id === id);
+    const chip = makeChip(id, (node && objectTitle(node)) || labelFor(id), colorFor(node?.typeId));
+    const space = document.createTextNode(' ');
+    span.replaceWith(chip, space);
+    rootRef.current?.focus();
+    place(space, 1);
+    setMenu(null);
+    setSuggest(null);
     persist();
   };
 
@@ -375,8 +415,23 @@ export function DocumentEditor({
       activeName.replaceWith(text);
       place(text, text.textContent?.length ?? 0);
       setMenu(null);
+      setSuggest(null);
       schedulePersist();
       return;
+    }
+    if (activeName && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      const hits = nameSuggestions(nodesRef.current, activeName.dataset.type ?? '', namingQuery(activeName));
+      if (hits.length) {
+        event.preventDefault();
+        const query = namingQuery(activeName);
+        const rect = activeName.getBoundingClientRect();
+        setSuggest((current) => {
+          const index = current && current.query === query ? current.active : 0;
+          const next = event.key === 'ArrowDown' ? (index + 1) % hits.length : (index - 1 + hits.length) % hits.length;
+          return { x: rect.left, y: rect.bottom + 4, query, active: next };
+        });
+        return;
+      }
     }
     if (event.key === 'Backspace' && window.getSelection()?.isCollapsed) {
       if (activeName && !(activeName.textContent ?? '').replace(/[\u200b\u00a0]/g, '').length) {
@@ -399,6 +454,13 @@ export function DocumentEditor({
     if (event.key !== 'Enter' || event.shiftKey) return;
     if (activeName) {
       event.preventDefault();
+      const query = namingQuery(activeName);
+      const hits = nameSuggestions(nodesRef.current, activeName.dataset.type ?? '', query);
+      if (hits.length) {
+        const index = suggestRef.current && suggestRef.current.query === query ? suggestRef.current.active : 0;
+        acceptSuggestion(activeName, hits[Math.min(index, hits.length - 1)].id);
+        return;
+      }
       void commitName(activeName);
       return;
     }
@@ -507,6 +569,7 @@ export function DocumentEditor({
             return;
           }
           setMenu(null);
+          setSuggest(null);
           persist();
         }}
         onClick={(event) => {
@@ -514,6 +577,31 @@ export function DocumentEditor({
           if (chip instanceof HTMLElement && chip.dataset.id) onOpen(chip.dataset.id);
         }}
       />
+      {suggest && (() => {
+        const naming = rootRef.current?.querySelector('.capture-name');
+        const typeId = naming instanceof HTMLElement ? naming.dataset.type ?? '' : '';
+        const hits = nameSuggestions(nodesRef.current, typeId, suggest.query);
+        if (!hits.length) return null;
+        return (
+          <div className="doc-menu" style={{ left: suggest.x, top: suggest.y }}>
+            {hits.map((node, index) => (
+              <button
+                key={node.id}
+                type="button"
+                className={index === suggest.active ? 'is-active' : ''}
+                onMouseEnter={() => setSuggest((current) => (current ? { ...current, active: index } : current))}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  const field = rootRef.current?.querySelector('.capture-name');
+                  if (field instanceof HTMLElement) acceptSuggestion(field, node.id);
+                }}
+              >
+                {objectTitle(node)}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
       {menu && (
         <div className="doc-menu" style={{ left: menu.x, top: menu.y }}>
           {captureChoices(menu.command).map((item) => (

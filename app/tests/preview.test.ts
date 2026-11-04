@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NodeRecord } from '../src/types';
-import { canonicalName, dayPreviewNodes, getReferenceCandidates, matchesTypeFilters, previewSnippet, sameObjectName, tasksAssignedTo } from '../src/utils/nodeUtils';
+import { canonicalName, dayPreviewNodes, getReferenceCandidates, matchesTypeFilters, nameSuggestions, previewSnippet, sameObjectName, tasksAssignedTo } from '../src/utils/nodeUtils';
 
 const link = '22222222-2222-2222-2222-222222222222';
 
@@ -135,6 +135,25 @@ describe('same object name', () => {
     expect(sameObjectName('Aurora.', 'aurora')).toBe(true);
     expect(sameObjectName('Soňa P.', 'soňa p')).toBe(true);
     expect(sameObjectName('Petr', 'Petra')).toBe(false);
+  });
+});
+
+describe('name suggestions', () => {
+  it('offers Aurora when the typed name starts with Au', () => {
+    const aurora = node({ id: 'aurora', typeId: 'project', title: 'Aurora' });
+    const beta = node({ id: 'beta', typeId: 'project', title: 'Beta' });
+    const person = node({ id: 'person', typeId: 'person', title: 'Aurora' });
+    const gone = node({ id: 'gone', typeId: 'project', title: 'August', deleted: true });
+    expect(nameSuggestions([aurora, beta, person, gone], 'project', 'Au').map((item) => item.id)).toEqual(['aurora']);
+    expect(nameSuggestions([aurora], 'project', 'aurora.').map((item) => item.id)).toEqual(['aurora']);
+    expect(nameSuggestions([aurora], 'project', '')).toEqual([]);
+  });
+
+  it('matches a later word and ignores diacritics', () => {
+    const web = node({ id: 'web', typeId: 'project', title: 'Nový web' });
+    const sona = node({ id: 'sona', typeId: 'person', title: 'Soňa' });
+    expect(nameSuggestions([web], 'project', 'we').map((item) => item.id)).toEqual(['web']);
+    expect(nameSuggestions([sona], 'person', 'son').map((item) => item.id)).toEqual(['sona']);
   });
 });
 
