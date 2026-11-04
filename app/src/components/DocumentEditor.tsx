@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Block, NodeRecord, ObjectTypeRecord } from '../types';
+import { readMedia, mediaObjectUrl } from '../services/mediaStore';
 import { emptyBlock, newBlockId } from '../utils/blocks';
 import { CAPTURE_SHORTCUTS, captureChoices, lineCaptures, openShortcut, type LinePiece } from '../utils/capture';
-import { displayTitle } from '../utils/nodeUtils';
+import { isDataUrl, parseBlobRef } from '../utils/media';
+import { canonicalName, displayTitle } from '../utils/nodeUtils';
 import { isStandaloneUrl, urlsInText } from '../utils/weblink';
 
 interface DocumentEditorProps {
@@ -69,7 +71,7 @@ export function DocumentEditor({
     const parts = text.split(/(\[\[[0-9a-fA-F-]{8,}\]\])/g);
     for (const part of parts) {
       const match = part.match(/^\[\[([0-9a-fA-F-]{8,})\]\]$/);
-      if (match) parent.append(makeChip(match[1], labelFor(match[1]), colorFor(nodesRef.current.find((item) => item.id === match[1])?.typeId)));
+      if (match) appendObject(parent, match[1]);
       else if (part) parent.append(document.createTextNode(part));
     }
   };
@@ -90,7 +92,7 @@ export function DocumentEditor({
     const root = rootRef.current;
     if (!root) return;
     const text = root.innerText.replace(/\u00a0/g, ' ').trim();
-    const hasChip = !!root.querySelector('.inline-object, .capture-name');
+    const hasChip = !!root.querySelector('.inline-object, .inline-image, .capture-name');
     root.dataset.empty = !text && !hasChip ? 'true' : 'false';
   };
 
@@ -213,6 +215,41 @@ export function DocumentEditor({
     return span;
   };
 
+  const appendObject = (parent: HTMLElement, id: string) => {
+    const node = nodesRef.current.find((item) => item.id === id);
+    if (node?.typeId === 'image') {
+      parent.append(makeImage(id, labelFor(id)));
+      return;
+    }
+    parent.append(makeChip(id, labelFor(id), colorFor(node?.typeId)));
+  };
+
+  const makeImage = (id: string, alt: string, src?: string) => {
+    const img = document.createElement('img');
+    img.className = 'inline-image';
+    img.dataset.id = id;
+    img.alt = alt;
+    img.contentEditable = 'false';
+    if (src) img.src = src;
+    else {
+      void imageSrc(id).then((url) => {
+        if (url && img.isConnected) img.src = url;
+      });
+    }
+    return img;
+  };
+
+  const imageSrc = async (id: string): Promise<string | null> => {
+    const node = nodesRef.current.find((item) => item.id === id);
+    const raw = node?.fieldValues.image?.src;
+    if (typeof raw !== 'string') return null;
+    if (isDataUrl(raw)) return raw;
+    const mediaId = parseBlobRef(raw);
+    if (!mediaId) return null;
+    const record = await readMedia(mediaId);
+    return record ? mediaObjectUrl(record) : null;
+  };
+
   const makeName = (typeId: string) => {
     const span = document.createElement('span');
     span.className = 'capture-name is-empty';
@@ -231,11 +268,21 @@ export function DocumentEditor({
   };
 
   const replaceTrailingShortcut = (paragraph: HTMLElement, typeId: string) => {
-    const plain = plainOf(paragraph);
-    const slashAt = plain.lastIndexOf('/');
-    const prefix = slashAt >= 0 ? plain.slice(0, slashAt) : plain;
-    paragraph.replaceChildren();
-    appendRich(paragraph, prefix);
+    let tail: ChildNode | null = paragraph.lastChild;
+    while (
+      tail &&
+      (tail.nodeName === 'BR' || (tail.nodeType === Node.TEXT_NODE && (tail.textContent ?? '').length === 0))
+    ) {
+      const previous = tail.previousSibling;
+      tail.remove();
+      tail = previous;
+    }
+    if (tail?.nodeType === Node.TEXT_NODE) {
+      const text = tail.textContent ?? '';
+      const slashAt = text.lastIndexOf('/');
+      if (slashAt >= 0) tail.textContent = text.slice(0, slashAt);
+      if (!(tail.textContent ?? '').length) tail.remove();
+    }
     const span = makeName(typeId);
     paragraph.append(span);
     focusName(span);
@@ -299,14 +346,21 @@ export function DocumentEditor({
       schedulePersist();
       return;
     }
-    const id = await onCreateObject(typeId, title);
-    if (!id) return;
-    const chip = makeChip(id, title, colorFor(typeId));
+    const chip = makeChip('', canonicalName(title) || title, colorFor(typeId));
     const space = document.createTextNode(' ');
     span.replaceWith(chip, space);
     rootRef.current?.focus();
     place(space, 1);
     setMenu(null);
+    const id = await onCreateObject(typeId, title);
+    if (!id) {
+      chip.replaceWith(document.createTextNode(title));
+      persist();
+      return;
+    }
+    chip.dataset.id = id;
+    const label = labelFor(id);
+    if (label && !label.startsWith(id.slice(0, 8))) chip.textContent = label;
     persist();
   };
 
@@ -414,6 +468,10 @@ export function DocumentEditor({
           }
           schedulePersist();
         }}
+        onDragOver={(event) => {
+          const types = [...event.dataTransfer.types];
+          if (types.includes('Files') || imageFiles(event.dataTransfer).length) event.preventDefault();
+        }}
         onPaste={(event) => {
           const images = imageFiles(event.clipboardData);
           if (images.length && onCreateImage) {
@@ -430,6 +488,15 @@ export function DocumentEditor({
           const images = imageFiles(event.dataTransfer);
           if (!images.length || !onCreateImage) return;
           event.preventDefault();
+          const point = (document as Document & { caretRangeFromPoint?: (x: number, y: number) => Range | null }).caretRangeFromPoint?.(
+            event.clientX,
+            event.clientY,
+          );
+          if (point) {
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(point);
+          }
           void insertImages(images);
         }}
         onBlur={(event) => {
@@ -443,7 +510,7 @@ export function DocumentEditor({
           persist();
         }}
         onClick={(event) => {
-          const chip = (event.target as HTMLElement).closest?.('.inline-object');
+          const chip = (event.target as HTMLElement).closest?.('.inline-object, .inline-image');
           if (chip instanceof HTMLElement && chip.dataset.id) onOpen(chip.dataset.id);
         }}
       />
@@ -478,19 +545,34 @@ export function DocumentEditor({
     place(node, node.textContent?.length ?? 0);
   }
 
+  function paragraphForInsert(): HTMLElement | null {
+    const root = rootRef.current;
+    if (!root) return null;
+    const current = currentParagraph();
+    if (current) return current;
+    const last = root.lastElementChild;
+    if (last instanceof HTMLElement && last.tagName === 'P') return last;
+    const created = document.createElement('p');
+    created.dataset.blockId = newBlockId();
+    root.append(created);
+    return created;
+  }
+
   async function insertImages(files: File[]) {
     if (!onCreateImage) return;
-    const paragraph = currentParagraph();
+    const paragraph = paragraphForInsert();
     if (!paragraph) return;
     for (const file of files) {
       const id = await onCreateImage(file);
       if (!id) continue;
       if (paragraph.childNodes.length) ensureSpace(paragraph);
-      const chip = makeChip(id, file.name, colorFor('image'));
+      const preview = URL.createObjectURL(file);
+      const image = makeImage(id, file.name.replace(/\.[^.]+$/, '') || file.name, preview);
       const space = document.createTextNode(' ');
-      paragraph.append(chip, space);
+      paragraph.append(image, space);
       place(space, 1);
     }
+    markEmpty();
     persist();
   }
 }

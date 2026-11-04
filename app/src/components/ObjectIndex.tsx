@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/appStore';
 import type { DataView, NodeRecord } from '../types';
 import { localToday } from '../utils/dateUtils';
-import { displayTitle, matchesTypeFilters, resolveLinks } from '../utils/nodeUtils';
+import { displayTitle, getReferenceCandidates, matchesTypeFilters, resolveLinks } from '../utils/nodeUtils';
 import { getIcon } from '../utils/icons';
 import { QueryBuilder } from './QueryBuilder';
 
@@ -51,10 +51,7 @@ export function ObjectIndex() {
   const showViews = activeView === 'type' || activeView === 'query' || activeView === 'collection';
   const statusField = activeView === 'type' ? type?.fields.find((field) => field.key === 'status' && field.type === 'select') : undefined;
   const assigneeField = activeView === 'type' ? type?.fields.find((field) => field.key === 'assignee' && field.type === 'reference') : undefined;
-  const people = useMemo(
-    () => nodes.filter((node) => !node.deleted && node.typeId === 'person'),
-    [nodes],
-  );
+  const people = useMemo(() => getReferenceCandidates(nodes, 'person'), [nodes]);
   const shown = useMemo(
     () => rows.filter((node) => matchesTypeFilters(node, { status: statusFilter, assignee: assigneeFilter })),
     [rows, statusFilter, assigneeFilter],

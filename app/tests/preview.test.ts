@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NodeRecord } from '../src/types';
-import { dayPreviewNodes, matchesTypeFilters, previewSnippet, tasksAssignedTo } from '../src/utils/nodeUtils';
+import { canonicalName, dayPreviewNodes, getReferenceCandidates, matchesTypeFilters, previewSnippet, sameObjectName, tasksAssignedTo } from '../src/utils/nodeUtils';
 
 const link = '22222222-2222-2222-2222-222222222222';
 
@@ -105,6 +105,36 @@ describe('type filters', () => {
     expect(matchesTypeFilters(petr, { status: 'done', assignee: 'petr' })).toBe(false);
     expect(matchesTypeFilters(done, { status: 'done' })).toBe(true);
     expect(matchesTypeFilters(done, { assignee: 'petr' })).toBe(false);
+  });
+});
+
+describe('assignee candidates', () => {
+  it('lists people and leaves out the daily note, its date, and other types', () => {
+    const day = node({
+      id: 'day',
+      typeId: 'dailyNote',
+      title: '2026-11-04',
+      supertagIds: ['dailyNote'],
+      fieldValues: { dailyNote: { date: '2026-11-04' } },
+    });
+    const datedPerson = node({ id: 'dated', typeId: 'person', title: '2026-11-04' });
+    const petra = node({ id: 'petra', typeId: 'person', title: 'Petra' });
+    const sona = node({ id: 'sona', typeId: 'person', title: 'Soňa P.' });
+    const aurora = node({ id: 'aurora', typeId: 'project', title: 'Aurora' });
+    const gone = node({ id: 'gone', typeId: 'person', title: 'Smazaná', deleted: true });
+    expect(getReferenceCandidates([day, datedPerson, petra, sona, aurora, gone], 'person').map((item) => item.id)).toEqual([
+      'petra',
+      'sona',
+    ]);
+  });
+});
+
+describe('same object name', () => {
+  it('treats Aurora and Aurora. as the same name', () => {
+    expect(canonicalName('Aurora.')).toBe('Aurora');
+    expect(sameObjectName('Aurora.', 'aurora')).toBe(true);
+    expect(sameObjectName('Soňa P.', 'soňa p')).toBe(true);
+    expect(sameObjectName('Petr', 'Petra')).toBe(false);
   });
 });
 

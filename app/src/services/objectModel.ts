@@ -160,6 +160,20 @@ async function seedObjectTypes(): Promise<void> {
     .filter(({ def }) => !known.has(def.id))
     .map(({ def, index }) => toTypeRecord(def, index));
   if (missing.length) await db.objectTypes.bulkPut(missing);
+  const updates: ObjectTypeRecord[] = [];
+  for (const def of defs) {
+    const stored = existing.find((type) => type.id === def.id);
+    if (!stored) continue;
+    let changed = false;
+    const fields = stored.fields.map((field) => {
+      const builtin = def.fields.find((item) => item.key === field.key);
+      if (!builtin?.referenceSupertag || field.referenceSupertag === builtin.referenceSupertag) return field;
+      changed = true;
+      return { ...field, referenceSupertag: builtin.referenceSupertag };
+    });
+    if (changed) updates.push({ ...stored, fields, updatedAt: now() });
+  }
+  if (updates.length) await db.objectTypes.bulkPut(updates);
 }
 
 async function migrateNodes(): Promise<void> {

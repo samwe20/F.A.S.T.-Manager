@@ -79,13 +79,13 @@ Editor bloků umí odstavec, nadpis, odrážku, zaškrtnutí a citát. Kód, mat
 
 Denní poznámka je textový editor. Píše se do ní věta jako do Capacities. Aplikace z věty nehádá typ, osobu ani projekt.
 
-Objekt vznikne jen ze zkratky. Denní poznámka je jeden souvislý text: myš vybere úsek a Backspace maže znak. /o a Enter otevře ve větě šedé pole pro jméno. Petr Pavel a Enter vloží do stejné věty odkaz na osobu a psaní pokračuje za ním. Stejně /u úkol, /pro projekt, /s schůzka, /poz poznámka a /? otázka. Zkratka se jménem na jednom řádku, třeba /o Petr Pavel a Enter, vloží odkaz hned. Několik zkratek na řádku vloží několik odkazů do stejné věty. Text před zkratkou zůstane. /p samo o sobě nic nezaloží, protože sedí na projekt i poznámku. Celé slovo typu funguje stejně jako zkratka: /osoba, /úkol, /projekt, /schůzka, /poznámka, /otázka. Lomítko, které není zkratka, zůstane text. Aplikace z věty pořád nehádá typ.
+Objekt vznikne jen ze zkratky. Denní poznámka je jeden souvislý text: myš vybere úsek a Backspace maže znak. /o a Enter otevře ve větě šedé pole pro jméno. Petr Pavel a Enter vloží do stejné věty odkaz na osobu a psaní pokračuje za ním. Stejně /u úkol, /pro projekt, /s schůzka, /poz poznámka a /? otázka. Zkratka se jménem na jednom řádku, třeba /o Petr Pavel a Enter, vloží odkaz hned. Několik zkratek na řádku vloží několik odkazů do stejné věty. Text před zkratkou zůstane. /p samo o sobě nic nezaloží, protože sedí na projekt i poznámku. Celé slovo typu funguje stejně jako zkratka: /osoba, /úkol, /projekt, /schůzka, /poznámka, /otázka. Lomítko, které není zkratka, zůstane text. Aplikace z věty pořád nehádá typ. Stejné jméno u stejného typu znovu použije stávající objekt. Aurora a Aurora. jsou jeden projekt.
 
-Na stránce osoby jsou vypsané úkoly, které mají v Přiřazeno tuto osobu. /u napsané na té stránce takový úkol založí. Na stránce projektu /u zapíše úkol do vlastnosti Projekt.
+Na stránce osoby jsou vypsané úkoly, které mají v Přiřazeno tuto osobu. /u napsané na té stránce takový úkol založí. Na stránce projektu /u zapíše úkol do vlastnosti Projekt. Výběr Přiřazeno nabízí jen osoby. Denní poznámka a datum v něm nejsou.
 
 Na denní poznámce nejsou úchyty pro přesun, odsazení ani štítek pod řádkem. Enter v obyčejném textu založí další odstavec. Enter po zkratce nejdřív vezme jméno a odkaz nechá ve větě. Úkol z denní poznámky dostane dueDate toho dne. Ostatní stránky mají stejné zkratky a navíc druhy bloků (odstavec, nadpis, odrážka, zaškrtnutí, citát).
 
-Obrázek vložený ze schránky nebo puštěný na text se sám uloží jako objekt typu obrázek a v textu se ukáže. Odkaz http nebo https se uloží jako objekt odkaz. Když je řádek jen ten odkaz, stane se z něj karta. Když je odkaz uvnitř věty, věta zůstane a objekt se uloží zvlášť.
+Obrázek vložený ze schránky nebo puštěný na text denní poznámky nebo poznámky se uloží jako objekt typu obrázek a v textu se ukáže jako obrázek. Odkaz http nebo https se uloží jako objekt odkaz. Když je řádek jen ten odkaz, stane se z něj karta. Když je odkaz uvnitř věty, věta zůstane a objekt se uloží zvlášť.
 
 # není supertag. Pod blokem je tlačítko štítku. #vesmír založí nebo znovu použije objekt typu štítek a přidá jeho id do tagIds bloku. Klik na štítek otevře stránku se všemi použitími.
 

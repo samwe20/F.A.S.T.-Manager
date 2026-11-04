@@ -8,7 +8,7 @@ import type { FieldDef } from '../types';
 import { splitIds, joinIds } from '../utils/blocks';
 import { labelInk } from '../utils/color';
 import { getIcon } from '../utils/icons';
-import { blocksWithTag, dayTodoBlocks, displayTitle, getReferenceCandidates, getUnlinkedMentions, objectTitle, resolveLinks, tasksAssignedTo } from '../utils/nodeUtils';
+import { blocksWithTag, dayTodoBlocks, displayTitle, getReferenceCandidates, getUnlinkedMentions, objectTitle, referenceTypeFor, resolveLinks, tasksAssignedTo } from '../utils/nodeUtils';
 import { BlockEditor } from './BlockEditor';
 import { FieldEditor } from './FieldEditor';
 
@@ -312,7 +312,7 @@ export function ObjectPage() {
             node.typeId === 'person' ? { personId: node.id } : node.typeId === 'project' ? { projectId: node.id } : undefined,
           )
         }
-        documentMode={node.typeId === 'dailyNote' || node.typeId === 'person'}
+        documentMode={node.typeId === 'dailyNote' || node.typeId === 'person' || node.typeId === 'note'}
         placeholder={node.typeId === 'person' ? t('blocks.placeholderPerson') : undefined}
         onChange={(blocks) => void saveObjectBody(node.id, title, blocks)}
       />
@@ -467,7 +467,7 @@ function MultiReference({
 }) {
   const nodes = useAppStore((s) => s.nodes);
   const selected = splitIds(value);
-  const candidates = getReferenceCandidates(nodes, field.referenceSupertag);
+  const candidates = getReferenceCandidates(nodes, referenceTypeFor(field));
   return (
     <div className="flex flex-wrap gap-1">
       {candidates.map((node) => {
