@@ -175,10 +175,64 @@ export function resolveNodeTitle(nodes: NodeRecord[], nodeId: string): string {
   return displayTitle(nodes, node) || nodeId.slice(0, 8);
 }
 
+const REFERENCE_HIDDEN = new Set(['dailyNote', 'tag', 'folder']);
+
+export function canonicalName(value: string): string {
+  return value.trim().replace(/[.。]+$/u, '').trim();
+}
+
+export function sameObjectName(a: string, b: string): boolean {
+  const left = canonicalName(a).toLocaleLowerCase('cs');
+  const right = canonicalName(b).toLocaleLowerCase('cs');
+  return left.length > 0 && left === right;
+}
+
+function foldName(value: string): string {
+  return canonicalName(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('cs');
+}
+
+export function nameSuggestions(nodes: NodeRecord[], typeId: string, query: string, limit = 8): NodeRecord[] {
+  const needle = foldName(query);
+  if (!needle || !typeId) return [];
+  const hits = nodes.filter((node) => {
+    if (node.deleted || node.typeId !== typeId) return false;
+    const names = [objectTitle(node), ...(node.aliases ?? [])];
+    return names.some((name) => {
+      const folded = foldName(name);
+      if (!folded) return false;
+      if (folded.startsWith(needle)) return true;
+      return folded.split(/\s+/).some((word) => word.startsWith(needle));
+    });
+  });
+  hits.sort((a, b) => {
+    const aStarts = foldName(objectTitle(a)).startsWith(needle) ? 0 : 1;
+    const bStarts = foldName(objectTitle(b)).startsWith(needle) ? 0 : 1;
+    return aStarts - bStarts || objectTitle(a).localeCompare(objectTitle(b), 'cs');
+  });
+  return hits.slice(0, limit);
+}
+
 export function getReferenceCandidates(
   nodes: NodeRecord[],
   referenceSupertag?: string,
 ): NodeRecord[] {
-  if (!referenceSupertag) return nodes;
-  return nodes.filter((n) => n.typeId === referenceSupertag || n.supertagIds.includes(referenceSupertag));
+  return nodes.filter((node) => {
+    if (node.deleted) return false;
+    if (typeof node.fieldValues.dailyNote?.date === 'string' && node.fieldValues.dailyNote.date) return false;
+    const typeId = node.typeId || node.supertagIds.find((id) => !REFERENCE_HIDDEN.has(id));
+    if (!typeId || REFERENCE_HIDDEN.has(typeId)) return false;
+    if (referenceSupertag === 'person' && /^\d{4}-\d{2}-\d{2}$/.test(objectTitle(node).trim())) return false;
+    if (!referenceSupertag) return true;
+    return typeId === referenceSupertag;
+  });
+}
+
+export function referenceTypeFor(field: { key: string; referenceSupertag?: string }): string | undefined {
+  if (field.referenceSupertag) return field.referenceSupertag;
+  if (field.key === 'assignee' || field.key === 'askedTo' || field.key === 'owner') return 'person';
+  if (field.key === 'project') return 'project';
+  return undefined;
 }

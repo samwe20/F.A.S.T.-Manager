@@ -42,6 +42,54 @@ export function parseCapture(text: string): CapturePlan | null {
   return { typeId: hit.typeId, title: (match[2] ?? '').trim() };
 }
 
+export type LinePiece =
+  | { kind: 'text'; text: string }
+  | { kind: 'create'; typeId: string; title: string }
+  | { kind: 'name'; typeId: string };
+
+/** A slash token at the end of the line, still without its name. */
+export function openShortcut(text: string): { command: string } | null {
+  const match = text.match(/(?:^|\s)\/(\S*)$/);
+  if (!match) return null;
+  return { command: match[1] ?? '' };
+}
+
+function exactAt(text: string, index: number): { typeId: string; commandEnd: number } | null {
+  if (text[index] !== '/') return null;
+  if (index > 0 && !/\s/.test(text[index - 1] ?? '')) return null;
+  const command = text.slice(index + 1).match(/^(\S+)/);
+  if (!command) return null;
+  const hit = CAPTURE_SHORTCUTS.find((item) => isExact(item, foldSlash(command[1])));
+  if (!hit) return null;
+  return { typeId: hit.typeId, commandEnd: index + 1 + command[1].length };
+}
+
+/**
+ * Exact shortcuts anywhere in the line. The name runs until the next shortcut.
+ * A shortcut with no name asks for one. A slash that is not a shortcut stays text.
+ */
+export function lineCaptures(text: string): LinePiece[] | null {
+  const hits: { start: number; commandEnd: number; typeId: string }[] = [];
+  for (let i = 0; i < text.length; i += 1) {
+    const found = exactAt(text, i);
+    if (!found) continue;
+    hits.push({ start: i, ...found });
+    i = found.commandEnd - 1;
+  }
+  if (hits.length === 0) return null;
+  const pieces: LinePiece[] = [];
+  let cursor = 0;
+  hits.forEach((hit, index) => {
+    const before = text.slice(cursor, hit.start).trim();
+    if (before) pieces.push({ kind: 'text', text: before });
+    const next = hits[index + 1]?.start ?? text.length;
+    const title = text.slice(hit.commandEnd, next).trim();
+    pieces.push(title ? { kind: 'create', typeId: hit.typeId, title } : { kind: 'name', typeId: hit.typeId });
+    cursor = next;
+  });
+  return pieces;
+}
+
 export function captureChoices(command: string): CaptureShortcut[] {
   const folded = foldSlash(command);
   if (!folded) return CAPTURE_SHORTCUTS;

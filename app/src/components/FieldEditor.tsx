@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/appStore';
 import { useMediaSrc } from '../hooks/useMediaSrc';
 import { parseContentField, serializeContentField, joinIds, splitIds } from '../utils/blocks';
-import { getReferenceCandidates, objectTitle } from '../utils/nodeUtils';
+import { getReferenceCandidates, objectTitle, referenceTypeFor } from '../utils/nodeUtils';
 import type { FieldDef, NodeRecord, ObjectTypeRecord } from '../types';
 import { BlockEditor } from './BlockEditor';
 
@@ -40,7 +40,7 @@ export function FieldEditor({ field, value, onChange, hideLabel = false, nodes: 
   }
 
   if (field.type === 'reference') {
-    const candidates = getReferenceCandidates(nodes, field.referenceSupertag);
+    const candidates = getReferenceCandidates(nodes, referenceTypeFor(field));
     const selectedId = String(value ?? '');
 
     return (

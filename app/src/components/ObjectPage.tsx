@@ -8,7 +8,7 @@ import type { FieldDef } from '../types';
 import { splitIds, joinIds } from '../utils/blocks';
 import { labelInk } from '../utils/color';
 import { getIcon } from '../utils/icons';
-import { blocksWithTag, dayTodoBlocks, displayTitle, getReferenceCandidates, getUnlinkedMentions, objectTitle, resolveLinks, tasksAssignedTo } from '../utils/nodeUtils';
+import { blocksWithTag, dayTodoBlocks, displayTitle, getReferenceCandidates, getUnlinkedMentions, objectTitle, referenceTypeFor, resolveLinks, tasksAssignedTo } from '../utils/nodeUtils';
 import { BlockEditor } from './BlockEditor';
 import { FieldEditor } from './FieldEditor';
 
@@ -73,16 +73,6 @@ export function ObjectPage() {
 
   const title = node.title ?? objectTitle(node);
   const dayKey = node.typeId === 'dailyNote' ? String(node.fieldValues.dailyNote?.date ?? '') : '';
-  const dayTasks =
-    node.typeId === 'dailyNote'
-      ? nodes.filter(
-          (item) =>
-            item.typeId === 'task' &&
-            !item.deleted &&
-            String(item.fieldValues.task?.dueDate ?? '') === dayKey &&
-            item.fieldValues.task?.status !== 'done',
-        )
-      : [];
   const dayChecks = node.typeId === 'dailyNote' && dayKey ? dayTodoBlocks(nodes, dayKey, [node.id]) : [];
   const personTasks = node.typeId === 'person' ? tasksAssignedTo(nodes, node.id) : [];
   const backlinks = getNodeBacklinks(node.id);
@@ -178,16 +168,8 @@ export function ObjectPage() {
         )}
       </div>
 
-      {node.typeId === 'dailyNote' && (dayTasks.length > 0 || dayChecks.length > 0) && (
+      {node.typeId === 'dailyNote' && dayChecks.length > 0 && (
         <ul className="day-tasks">
-          {dayTasks.map((task) => (
-            <li key={task.id}>
-              <button type="button" className="day-task" onClick={() => openObject(task.id)}>
-                <i style={{ background: objectTypes.find((item) => item.id === task.typeId)?.color }} />
-                {displayTitle(nodes, task) || t('object.untitled')}
-              </button>
-            </li>
-          ))}
           {dayChecks.map((hit) => (
             <li key={hit.blockId}>
               <button type="button" className="day-task" onClick={() => openObject(hit.nodeId)}>
@@ -330,7 +312,7 @@ export function ObjectPage() {
             node.typeId === 'person' ? { personId: node.id } : node.typeId === 'project' ? { projectId: node.id } : undefined,
           )
         }
-        documentMode={node.typeId === 'dailyNote' || node.typeId === 'person'}
+        documentMode={node.typeId === 'dailyNote' || node.typeId === 'person' || node.typeId === 'note'}
         placeholder={node.typeId === 'person' ? t('blocks.placeholderPerson') : undefined}
         onChange={(blocks) => void saveObjectBody(node.id, title, blocks)}
       />
@@ -485,7 +467,7 @@ function MultiReference({
 }) {
   const nodes = useAppStore((s) => s.nodes);
   const selected = splitIds(value);
-  const candidates = getReferenceCandidates(nodes, field.referenceSupertag);
+  const candidates = getReferenceCandidates(nodes, referenceTypeFor(field));
   return (
     <div className="flex flex-wrap gap-1">
       {candidates.map((node) => {

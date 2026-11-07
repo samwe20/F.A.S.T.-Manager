@@ -75,7 +75,7 @@ import { emptyBlock } from '../utils/blocks';
 import { blobRef } from '../utils/media';
 import { localToday } from '../utils/dateUtils';
 import { getFolderNodes, resolveFolderTitle } from '../utils/folderUtils';
-import { getBacklinks, resolveNodeTitle, searchNodes } from '../utils/nodeUtils';
+import { canonicalName, getBacklinks, objectTitle, resolveNodeTitle, sameObjectName, searchNodes } from '../utils/nodeUtils';
 
 export type ViewMode =
   | 'inbox'
@@ -200,6 +200,8 @@ function resolveTheme(theme: Theme): 'light' | 'dark' {
   }
   return theme;
 }
+
+const objectInflight = new Map<string, Promise<string | undefined>>();
 
 export const useAppStore = create<AppState>((set, get) => ({
   ready: false,
@@ -877,21 +879,37 @@ export const useAppStore = create<AppState>((set, get) => ({
     const type = objectTypes.find((item) => item.id === typeId);
     if (!type) return undefined;
     const fields = fieldsForLineObject(type, dueDate, links);
-    const trimmed = title.trim();
-    const node = await get().withHistory(() =>
-      createNode({
-        workspaceId: settings.workspaceId,
-        parentId: null,
-        content: trimmed,
-        title: trimmed,
-        typeId,
-        supertagIds: [typeId],
-        fieldValues: { [typeId]: fields },
-        blocks: [emptyBlock()],
-      }),
-    );
-    await get().refresh();
-    return node.id;
+    const trimmed = canonicalName(title);
+    if (!trimmed) return undefined;
+    const key = `${typeId}\u0000${trimmed.toLocaleLowerCase('cs')}`;
+    const pending = objectInflight.get(key);
+    if (pending) return pending;
+    const run = (async () => {
+      const existing = get().nodes.find(
+        (node) => !node.deleted && node.typeId === typeId && sameObjectName(objectTitle(node), trimmed),
+      );
+      if (existing) return existing.id;
+      const node = await get().withHistory(() =>
+        createNode({
+          workspaceId: settings.workspaceId,
+          parentId: null,
+          content: trimmed,
+          title: trimmed,
+          typeId,
+          supertagIds: [typeId],
+          fieldValues: { [typeId]: fields },
+          blocks: [emptyBlock()],
+        }),
+      );
+      await get().refresh();
+      return node.id;
+    })();
+    objectInflight.set(key, run);
+    try {
+      return await run;
+    } finally {
+      objectInflight.delete(key);
+    }
   },
 }));
 
